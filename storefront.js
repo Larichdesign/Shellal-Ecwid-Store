@@ -375,21 +375,35 @@ Ecwid.OnAPILoaded.add(() => {
   init();
 
   /* ---------- Helpers: mount placement ---------- */
-  function ensureRootInserted(){
-    const rootId = "ff-root";
-    let el = document.getElementById(rootId);
-    if (el) return el;
-
-    el = document.createElement("section");
-    el.id = rootId;
-
-    // Try to place above Ecwid widget if present
-    const ecwidMount = document.querySelector("#my-store, #ecwid-store, .ec-store");
-    if (ecwidMount && ecwidMount.parentNode){
-      ecwidMount.parentNode.insertBefore(el, ecwidMount);
-    } else {
-      document.body.insertAdjacentElement("afterbegin", el);
+function ensureRootInserted() {
+  // Look for the custom mount point placed on your page
+  const custom = document.querySelector('#ff-mount');
+  if (custom) {
+    let el = document.getElementById('ff-root');
+    if (!el) {
+      el = document.createElement('section');
+      el.id = 'ff-root';
+      custom.appendChild(el);
     }
     return el;
   }
+
+  // fallback if no custom mount exists
+  let el = document.getElementById('ff-root');
+  if (el) return el;
+
+  el = document.createElement('section');
+  el.id = 'ff-root';
+
+  const ecwidMount = document.querySelector('#my-store, #ecwid-store, .ec-store');
+  if (ecwidMount && ecwidMount.parentNode) {
+    ecwidMount.parentNode.insertBefore(el, ecwidMount);
+  } else {
+    document.body.insertAdjacentElement('afterbegin', el);
+  }
+
+  return el;
+}
+
 });
+
