@@ -347,30 +347,45 @@ Ecwid.OnAPILoaded.add(() => {
   }
 
   function fetchAllProducts(cb){
-    const batch = 100;
-    let offset = 0;
-    const out = [];
-    const loop = ()=>{
-      Ecwid.API.get("products", { limit: batch, offset }, (res)=>{
-        const items = (res && res.items) ? res.items : [];
-        out.push(...items);
-        if (items.length === batch && out.length < maxProductsToLoad){
-          offset += batch; loop();
-        } else { cb(out); }
-      });
-    };
-    loop();
-  }
+  const batch = 100;
+  let offset = 0;
+  const out = [];
 
-  function init(){
-    fetchAllProducts(items=>{
-      S.all = items;
-      collectFromProducts(items);
-      buildTabsAndPanels();
-      S.filtered = items.slice();
-      paginateAndRender();
+  const params = {
+    limit: batch,
+    offset,
+    // ensure we receive options so we can build tabs/values
+    includeFields: "id,name,thumbnailUrl,imageUrl,created,options"
+  };
+
+  const loop = () => {
+    // keep offset updated in params
+    params.offset = offset;
+    Ecwid.API.get("products", params, (res) => {
+      const items = (res && res.items) ? res.items : [];
+      out.push(...items);
+
+      if (items.length === batch && out.length < maxProductsToLoad) {
+        offset += batch;
+        loop();
+      } else {
+        cb(out);
+      }
     });
-  }
+  };
+  loop();
+}
+
+ function init(){
+  fetchAllProducts(items=>{
+    console.log("Products loaded:", items.length, items.slice(0,3)); // debug
+    S.all = items;
+    collectFromProducts(items); // builds option names + values
+    buildTabsAndPanels();
+    S.filtered = items.slice();
+    paginateAndRender();
+  });
+}
 
   init();
 
@@ -406,4 +421,5 @@ function ensureRootInserted() {
 }
 
 });
+
 
