@@ -7,6 +7,8 @@
 
 Ecwid.OnAPILoaded.add(() => {
 
+   console.log("✅ Ecwid Storefront JS API is ready");
+
    Ecwid.API.get('products', {
     limit: 1,
     includeFields: 'id,name,options,attributes,brand,created'
@@ -426,6 +428,7 @@ function ensureRootInserted() {
 }
 
 });
+
 
 
 
