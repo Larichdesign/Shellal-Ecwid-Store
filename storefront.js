@@ -383,14 +383,17 @@ function collectFromProducts(items){
 }
 
 
- function fetchAllProducts(cb){
+function fetchAllProducts(cb){
   const batch = 100;
   let offset = 0;
   const out = [];
 
+  // 👉 only fetch products that are displayed on storefront (enabled)
   const params = {
     limit: batch,
     offset,
+    enabled: true,                // <— key line
+    // inStock: true,             // <— uncomment if you only want in-stock
     includeFields: "id,name,thumbnailUrl,imageUrl,created,options,attributes"
   };
 
@@ -399,15 +402,17 @@ function collectFromProducts(items){
     Ecwid.API.get("products", params, (res) => {
       const items = (res && res.items) ? res.items : [];
       out.push(...items);
+
       if (items.length === batch && out.length < maxProductsToLoad){
-        offset += batch; loop();
+        offset += batch;
+        loop();
       } else {
         if (!out.length){
           console.warn("[FF] 1st try returned 0 items. Retrying without includeFields…");
-          // Fallback retry (some setups filter fields oddly)
+          // Fallback retry while keeping enabled filter
           fallbackFetch(cb);
         } else {
-          console.log("[FF] Products loaded (with fields):", out.length);
+          console.log("[FF] Products loaded (enabled only):", out.length);
           cb(out);
         }
       }
@@ -416,7 +421,7 @@ function collectFromProducts(items){
 
   const fallbackFetch = (done)=>{
     let off = 0; const acc = [];
-    const p = { limit: batch, offset: off };
+    const p = { limit: batch, offset: off, enabled: true /*, inStock: true*/ };
     const step = ()=>{
       p.offset = off;
       Ecwid.API.get("products", p, (res)=>{
@@ -425,7 +430,7 @@ function collectFromProducts(items){
         if (items.length === batch && acc.length < maxProductsToLoad){
           off += batch; step();
         } else {
-          console.log("[FF] Products loaded (fallback):", acc.length);
+          console.log("[FF] Products loaded (fallback, enabled only):", acc.length);
           done(acc);
         }
       });
@@ -520,6 +525,7 @@ setTimeout(bootOnce, 3000);
     return el;
   }
 });
+
 
 
 
