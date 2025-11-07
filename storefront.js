@@ -348,65 +348,93 @@ Ecwid.OnAPILoaded.add(() => {
   };
 
   /* --------------- LOAD PRODUCTS --------------- */
-  function collectFromProducts(items){
-    const namesFound = new Set();
+function collectFromProducts(items){
+  const namesFound = new Set();
 
-    items.forEach(p=>{
-      // OPTIONS
-      (p.options || []).forEach(opt=>{
-        if (!opt || !opt.name) return;
-        namesFound.add(opt.name);
-        ensureSetsFor(opt.name);
-        (opt.choices || []).forEach(ch=>{
-          const v = ch && (ch.text || ch.value || ch.title);
-          if (v) S.optionValues[opt.name].add(String(v));
-        });
-      });
-
-      // ATTRIBUTES
-      (p.attributes || []).forEach(att=>{
-        const n = att && att.name;
-        const v = att && (att.value || att.valueText || att.text);
-        if (!n || !v) return;
-        namesFound.add(n);
-        ensureSetsFor(n);
-        S.optionValues[n].add(String(v));
+  items.forEach(p=>{
+    // options
+    (p.options || []).forEach(opt=>{
+      if (!opt || !opt.name) return;
+      namesFound.add(opt.name);
+      ensureSetsFor(opt.name);
+      (opt.choices || []).forEach(ch=>{
+        const v = ch && (ch.text || ch.value || ch.title);
+        if (v) S.optionValues[opt.name].add(String(v));
       });
     });
 
-    const allNames = Array.from(namesFound);
-    const preferred = preferredNames.filter(n => allNames.includes(n));
-    S.optionNames = whitelist ? preferred : (preferred.length ? preferred : allNames);
-    S.optionNames.forEach(ensureSetsFor);
-  }
+    // attributes
+    (p.attributes || []).forEach(att=>{
+      const n = att && att.name;
+      const v = att && (att.value || att.valueText || att.text);
+      if (!n || !v) return;
+      namesFound.add(n);
+      ensureSetsFor(n);
+      S.optionValues[n].add(String(v));
+    });
+  });
 
-  function fetchAllProducts(cb){
-    const batch = 100;
-    let offset = 0;
-    const out = [];
+  const allNames = Array.from(namesFound);
+  const preferred = preferredNames.filter(n => allNames.includes(n));
 
-    const params = {
-      limit: batch,
-      offset,
-      // IMPORTANT: request attributes + options
-      includeFields: "id,name,thumbnailUrl,imageUrl,created,options,attributes"
-    };
+  // If nothing found, keep empty tabs list but still render the grid
+  S.optionNames = whitelist ? preferred : (preferred.length ? preferred : allNames);
+  S.optionNames.forEach(ensureSetsFor);
+}
 
-    const loop = () => {
-      params.offset = offset;
-      Ecwid.API.get("products", params, (res) => {
-        const items = (res && res.items) ? res.items : [];
-        out.push(...items);
-        if (items.length === batch && out.length < maxProductsToLoad){
-          offset += batch; loop();
+
+ function fetchAllProducts(cb){
+  const batch = 100;
+  let offset = 0;
+  const out = [];
+
+  const params = {
+    limit: batch,
+    offset,
+    includeFields: "id,name,thumbnailUrl,imageUrl,created,options,attributes"
+  };
+
+  const loop = () => {
+    params.offset = offset;
+    Ecwid.API.get("products", params, (res) => {
+      const items = (res && res.items) ? res.items : [];
+      out.push(...items);
+      if (items.length === batch && out.length < maxProductsToLoad){
+        offset += batch; loop();
+      } else {
+        if (!out.length){
+          console.warn("[FF] 1st try returned 0 items. Retrying without includeFields…");
+          // Fallback retry (some setups filter fields oddly)
+          fallbackFetch(cb);
         } else {
+          console.log("[FF] Products loaded (with fields):", out.length);
           cb(out);
+        }
+      }
+    });
+  };
+
+  const fallbackFetch = (done)=>{
+    let off = 0; const acc = [];
+    const p = { limit: batch, offset: off };
+    const step = ()=>{
+      p.offset = off;
+      Ecwid.API.get("products", p, (res)=>{
+        const items = (res && res.items) ? res.items : [];
+        acc.push(...items);
+        if (items.length === batch && acc.length < maxProductsToLoad){
+          off += batch; step();
+        } else {
+          console.log("[FF] Products loaded (fallback):", acc.length);
+          done(acc);
         }
       });
     };
-    loop();
-  }
+    step();
+  };
 
+  loop();
+}
    function whenAPIready(cb){
   if (window.Ecwid && Ecwid.API && typeof Ecwid.API.get === 'function') return cb();
   const iv = setInterval(() => {
@@ -419,15 +447,24 @@ Ecwid.OnAPILoaded.add(() => {
 
 
   function init(){
-    fetchAllProducts(items=>{
-      console.log("Products loaded:", items.length);
-      S.all = items;
-      collectFromProducts(items);
+  fetchAllProducts(items=>{
+    console.log("[FF] Final items:", items.length, items.slice(0,3));
+    S.all = items;
+    collectFromProducts(items);
+
+    // Build tabs only if we actually found names
+    if (S.optionNames.length){
       buildTabsAndPanels();
-      S.filtered = items.slice();
-      paginateAndRender();
-    });
-  }
+    } else {
+      document.querySelector("#ff-tabs").innerHTML = ""; // no tabs if no fields
+    }
+
+    // Always show products
+    S.filtered = items.slice();
+    paginateAndRender();
+  });
+}
+
 
   whenAPIready(init);
 
@@ -458,4 +495,5 @@ Ecwid.OnAPILoaded.add(() => {
     return el;
   }
 });
+
 
