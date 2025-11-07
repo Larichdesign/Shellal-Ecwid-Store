@@ -435,39 +435,60 @@ function collectFromProducts(items){
 
   loop();
 }
-   function whenAPIready(cb){
+// wait until API exists
+function whenAPIready(cb){
   if (window.Ecwid && Ecwid.API && typeof Ecwid.API.get === 'function') return cb();
   const iv = setInterval(() => {
     if (window.Ecwid && Ecwid.API && typeof Ecwid.API.get === 'function'){
       clearInterval(iv); cb();
     }
   }, 150);
-  setTimeout(() => clearInterval(iv), 10000); // stop after 10s
+  setTimeout(() => clearInterval(iv), 12000);
 }
+
+// also wait for the Ecwid Product Browser to finish its own init
+let ffBooted = false;
+function bootOnce(){
+  if (ffBooted) return;
+  ffBooted = true;
+  whenAPIready(init);
+}
+
+// run on API loaded
+whenAPIready(init);
+
+// and run again when Ecwid page finishes loading (covers delayed widget cases)
+if (Ecwid && Ecwid.OnPageLoaded) {
+  Ecwid.OnPageLoaded.add(function(page){
+    console.log('[FF] OnPageLoaded:', page?.type || 'unknown');
+    bootOnce();
+  });
+}
+
+// last resort fallback
+setTimeout(bootOnce, 3000);
+
 
 
   function init(){
+  console.log('[FF] init()');
   fetchAllProducts(items=>{
-    console.log("⚠️ FETCH RESULT:", {
-  count: items.length,
-  sample: items.slice(0,5)
-});
+    console.log('⚠️ FETCH RESULT:', { count: items.length, sample: items.slice(0,5) });
 
     S.all = items;
     collectFromProducts(items);
 
-    // Build tabs only if we actually found names
     if (S.optionNames.length){
       buildTabsAndPanels();
     } else {
-      document.querySelector("#ff-tabs").innerHTML = ""; // no tabs if no fields
+      document.querySelector('#ff-tabs').innerHTML = '';
     }
 
-    // Always show products
     S.filtered = items.slice();
     paginateAndRender();
   });
 }
+
 
 
   whenAPIready(init);
@@ -499,6 +520,7 @@ function collectFromProducts(items){
     return el;
   }
 });
+
 
 
 
