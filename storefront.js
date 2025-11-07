@@ -407,6 +407,17 @@ Ecwid.OnAPILoaded.add(() => {
     loop();
   }
 
+   function whenAPIready(cb){
+  if (window.Ecwid && Ecwid.API && typeof Ecwid.API.get === 'function') return cb();
+  const iv = setInterval(() => {
+    if (window.Ecwid && Ecwid.API && typeof Ecwid.API.get === 'function'){
+      clearInterval(iv); cb();
+    }
+  }, 150);
+  setTimeout(() => clearInterval(iv), 10000); // stop after 10s
+}
+
+
   function init(){
     fetchAllProducts(items=>{
       console.log("Products loaded:", items.length);
@@ -418,7 +429,7 @@ Ecwid.OnAPILoaded.add(() => {
     });
   }
 
-  init();
+  whenAPIready(init);
 
   /* ---------- Helpers: mount placement ---------- */
   function ensureRootInserted(){
@@ -447,3 +458,4 @@ Ecwid.OnAPILoaded.add(() => {
     return el;
   }
 });
+
