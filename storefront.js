@@ -8,6 +8,26 @@
 Ecwid.OnAPILoaded.add(() => {
   console.log("✅ Ecwid Storefront JS API is ready");
 
+   // --- PROBE: print store id and first product names so we know API works here ---
+function probe(){
+  if (!window.Ecwid || !Ecwid.API || typeof Ecwid.API.get !== 'function'){
+    console.log('[FF] probe: Ecwid.API.get not ready');
+    return;
+    }
+  Ecwid.API.get('storeProfile', {}, res => {
+    console.log('[FF] storeProfile.id:', res && res.id);
+  });
+  Ecwid.API.get('products', { limit: 5, includeFields: 'id,name' }, res => {
+    const names = (res && res.items || []).map(i => i.name);
+    console.log('[FF] probe products:', (res && res.count) || (res && res.items && res.items.length) || 0, names);
+  });
+}
+// run the probe a couple of times in case the widget is late
+setTimeout(probe, 0);
+setTimeout(probe, 800);
+setTimeout(probe, 1600);
+
+
   /* ------------------ CONFIG ------------------ */
   const preferredNames = ["Color", "Durability", "Category", "Designer"]; // show these first if present
   const whitelist = false;          // true => show only preferredNames even if others exist
@@ -441,6 +461,7 @@ function fetchAllProducts(cb){
   loop();
 }
 // wait until API exists
+// wait until API exists
 function whenAPIready(cb){
   if (window.Ecwid && Ecwid.API && typeof Ecwid.API.get === 'function') return cb();
   const iv = setInterval(() => {
@@ -451,27 +472,24 @@ function whenAPIready(cb){
   setTimeout(() => clearInterval(iv), 12000);
 }
 
-// also wait for the Ecwid Product Browser to finish its own init
+// boot only once
 let ffBooted = false;
 function bootOnce(){
   if (ffBooted) return;
   ffBooted = true;
+  console.log('[FF] bootOnce → init()');
   whenAPIready(init);
 }
 
-// run on API loaded
-whenAPIready(init);
-
-// and run again when Ecwid page finishes loading (covers delayed widget cases)
+// trigger paths
+whenAPIready(init);                      // normal path
 if (Ecwid && Ecwid.OnPageLoaded) {
-  Ecwid.OnPageLoaded.add(function(page){
+  Ecwid.OnPageLoaded.add((page) => {
     console.log('[FF] OnPageLoaded:', page?.type || 'unknown');
-    bootOnce();
+    bootOnce();                          // delayed widget path
   });
 }
-
-// last resort fallback
-setTimeout(bootOnce, 3000);
+setTimeout(bootOnce, 2500);              // last-resort fallback
 
 
 
@@ -525,6 +543,7 @@ setTimeout(bootOnce, 3000);
     return el;
   }
 });
+
 
 
 
