@@ -448,7 +448,11 @@ function collectFromProducts(items){
 
   function init(){
   fetchAllProducts(items=>{
-    console.log("[FF] Final items:", items.length, items.slice(0,3));
+    console.log("⚠️ FETCH RESULT:", {
+  count: items.length,
+  sample: items.slice(0,5)
+});
+
     S.all = items;
     collectFromProducts(items);
 
@@ -495,5 +499,6 @@ function collectFromProducts(items){
     return el;
   }
 });
+
 
 
