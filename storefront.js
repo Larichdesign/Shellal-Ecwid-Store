@@ -6,6 +6,11 @@
    ============================================================ */
 
 Ecwid.OnAPILoaded.add(() => {
+
+   Ecwid.API.get('products', {
+    limit: 1,
+    includeFields: 'id,name,options,attributes,brand,created'
+  }, res => console.log(res.items[0]));
   /* ------------------ CONFIG ------------------ */
   const preferredNames = ["Color", "Durability", "Category", "Designer"]; // use these first if they exist
   const whitelist = false;          // true => show only preferredNames
@@ -423,11 +428,4 @@ function ensureRootInserted() {
 });
 
 
-
-Ecwid.OnAPILoaded.add(() => {
-  Ecwid.API.get('products', {
-    limit: 1,
-    includeFields: 'id,name,options,attributes,brand,created'
-  }, res => console.log(res.items[0]));
-});
 
