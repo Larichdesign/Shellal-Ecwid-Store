@@ -1,28 +1,23 @@
 /* ============================================================
    ECWID — Storefront JS API Filters + Grid + Pagination
-   - Tabs (titles) come from PRODUCT OPTION NAMES
-   - Checkbox values come from PRODUCT OPTION CHOICES
-   - No tokens; works via Ecwid.OnAPILoaded + Ecwid.API.get
+   - Tabs (titles) come from OPTION or ATTRIBUTE NAMES
+   - Checkbox values come from OPTION CHOICES or ATTRIBUTE VALUES
+   - No tokens; runs via Ecwid.OnAPILoaded + Ecwid.API.get
    ============================================================ */
 
 Ecwid.OnAPILoaded.add(() => {
+  console.log("✅ Ecwid Storefront JS API is ready");
 
-   console.log("✅ Ecwid Storefront JS API is ready");
-
-   Ecwid.API.get('products', {
-    limit: 1,
-    includeFields: 'id,name,options,attributes,brand,created'
-  }, res => console.log(res.items[0]));
   /* ------------------ CONFIG ------------------ */
-  const preferredNames = ["Color", "Durability", "Category", "Designer"]; // use these first if they exist
-  const whitelist = false;          // true => show only preferredNames
+  const preferredNames = ["Color", "Durability", "Category", "Designer"]; // show these first if present
+  const whitelist = false;          // true => show only preferredNames even if others exist
   const pageSize = 12;              // items per page
-  const maxProductsToLoad = 800;    // safety cap (fetches in batches of 100)
+  const maxProductsToLoad = 800;    // safety cap (batches of 100)
 
   /* -------------- DOM INJECTION --------------- */
   const mount = ensureRootInserted();
 
-  // inject styles
+  // Styles
   const style = document.createElement("style");
   style.textContent = `
     :root{
@@ -76,7 +71,7 @@ Ecwid.OnAPILoaded.add(() => {
   `;
   document.head.appendChild(style);
 
-  // inject HTML shell
+  // HTML shell
   mount.innerHTML = `
     <div class="ff-header">
       <div class="ff-kicker">Filter fabric by:</div>
@@ -93,25 +88,31 @@ Ecwid.OnAPILoaded.add(() => {
   const S = {
     all: [],
     optionNames: [],
-    optionValues: {}, // {name:Set(values)}
-    selected: {},     // {name:Set(selectedValues)}
+    optionValues: {}, // { name: Set(values) } (from options or attributes)
+    selected: {},     // { name: Set(selectedValues) }
     page: 1,
     filtered: []
   };
 
   /* --------------- HELPERS -------------- */
-  function ensureSetsFor(name){
+  const ensureSetsFor = (name) => {
     if (!S.optionValues[name]) S.optionValues[name] = new Set();
     if (!S.selected[name]) S.selected[name] = new Set();
-  }
+  };
   const uniqueSorted = arr => Array.from(new Set(arr.filter(Boolean))).sort((a,b)=>a.localeCompare(b));
-  const getOptionDef = (p, n) => (p.options || []).find(o => o && o.name === n);
+  const findOption = (p, n) => (p.options || []).find(o => o && o.name === n);
+  const findAttr   = (p, n) => (p.attributes || []).find(a => a && a.name === n);
+
+  // Subline prefers attributes, falls back to first option choice
   function sublineFromPreferred(p){
     const look = preferredNames.concat(S.optionNames.filter(n=>!preferredNames.includes(n)));
     for (const n of look){
-      const def = getOptionDef(p, n);
+      const att = findAttr(p, n);
+      const attVal = att && (att.value || att.valueText || att.text);
+      if (attVal) return String(attVal);
+      const def = findOption(p, n);
       if (def && def.choices && def.choices.length){
-        const t = def.choices[0]?.text || "";
+        const t = def.choices[0]?.text;
         if (t) return t;
       }
     }
@@ -154,22 +155,20 @@ Ecwid.OnAPILoaded.add(() => {
             </div>
           </div>` : ``}
           <form class="ff-checklist" data-filter="${name}">
-            ${
-              values.length
-                ? values.map(v=>`<label><input type="checkbox" value="${v}"><span>${v}</span></label>`).join("")
-                : `<div style="color:#666">No values found for ${name}.</div>`
-            }
+            ${values.length
+              ? values.map(v=>`<label><input type="checkbox" value="${v}"><span>${v}</span></label>`).join("")
+              : `<div style="color:#666">No values found for ${name}.</div>`}
           </form>
           <div class="ff-panel-actions">
             <button type="button" class="ff-apply" data-apply="${name}">Apply Filters</button>
             <button type="button" class="ff-clear" data-clear="${name}">Clear</button>
           </div>
-        </div>
-      `;
+        </div>`;
       panelsWrap.appendChild(panel);
       S.selected[name] = S.selected[name] || new Set();
     });
 
+    // "Show All"
     const showAll = document.createElement("button");
     showAll.className = "ff-tab ff-showall";
     showAll.dataset.panel = "__all";
@@ -308,6 +307,7 @@ Ecwid.OnAPILoaded.add(() => {
   }
 
   /* --------------- FILTERING --------------- */
+  // Match selected values against either options OR attributes
   function applyFilters(){
     const active = Object.entries(S.selected).filter(([,set])=>set.size);
     if (!active.length){
@@ -315,10 +315,25 @@ Ecwid.OnAPILoaded.add(() => {
     } else {
       S.filtered = S.all.filter(p=>{
         return active.every(([name,set])=>{
-          const def = getOptionDef(p, name);
-          if (!def || !Array.isArray(def.choices) || !def.choices.length) return false;
-          const vals = def.choices.map(c=>c.text);
-          return Array.from(set).some(s => vals.includes(s));
+          const selectedValues = Array.from(set);
+
+          // Option-based
+          let optionMatch = false;
+          const def = findOption(p, name);
+          if (def && Array.isArray(def.choices) && def.choices.length){
+            const vals = def.choices.map(c => c.text);
+            optionMatch = selectedValues.some(s => vals.includes(s));
+          }
+
+          // Attribute-based
+          let attributeMatch = false;
+          const att = findAttr(p, name);
+          if (att){
+            const val = String(att.value || att.valueText || att.text || "");
+            attributeMatch = val && selectedValues.includes(val);
+          }
+
+          return optionMatch || attributeMatch;
         });
       });
     }
@@ -335,15 +350,27 @@ Ecwid.OnAPILoaded.add(() => {
   /* --------------- LOAD PRODUCTS --------------- */
   function collectFromProducts(items){
     const namesFound = new Set();
+
     items.forEach(p=>{
+      // OPTIONS
       (p.options || []).forEach(opt=>{
         if (!opt || !opt.name) return;
         namesFound.add(opt.name);
         ensureSetsFor(opt.name);
         (opt.choices || []).forEach(ch=>{
           const v = ch && (ch.text || ch.value || ch.title);
-          if (v) S.optionValues[opt.name].add(v);
+          if (v) S.optionValues[opt.name].add(String(v));
         });
+      });
+
+      // ATTRIBUTES
+      (p.attributes || []).forEach(att=>{
+        const n = att && att.name;
+        const v = att && (att.value || att.valueText || att.text);
+        if (!n || !v) return;
+        namesFound.add(n);
+        ensureSetsFor(n);
+        S.optionValues[n].add(String(v));
       });
     });
 
@@ -354,81 +381,69 @@ Ecwid.OnAPILoaded.add(() => {
   }
 
   function fetchAllProducts(cb){
-  const batch = 100;
-  let offset = 0;
-  const out = [];
+    const batch = 100;
+    let offset = 0;
+    const out = [];
 
-  const params = {
-    limit: batch,
-    offset,
-    // ensure we receive options so we can build tabs/values
-    includeFields: "id,name,thumbnailUrl,imageUrl,created,options"
-  };
+    const params = {
+      limit: batch,
+      offset,
+      // IMPORTANT: request attributes + options
+      includeFields: "id,name,thumbnailUrl,imageUrl,created,options,attributes"
+    };
 
-  const loop = () => {
-    // keep offset updated in params
-    params.offset = offset;
-    Ecwid.API.get("products", params, (res) => {
-      const items = (res && res.items) ? res.items : [];
-      out.push(...items);
+    const loop = () => {
+      params.offset = offset;
+      Ecwid.API.get("products", params, (res) => {
+        const items = (res && res.items) ? res.items : [];
+        out.push(...items);
+        if (items.length === batch && out.length < maxProductsToLoad){
+          offset += batch; loop();
+        } else {
+          cb(out);
+        }
+      });
+    };
+    loop();
+  }
 
-      if (items.length === batch && out.length < maxProductsToLoad) {
-        offset += batch;
-        loop();
-      } else {
-        cb(out);
-      }
+  function init(){
+    fetchAllProducts(items=>{
+      console.log("Products loaded:", items.length);
+      S.all = items;
+      collectFromProducts(items);
+      buildTabsAndPanels();
+      S.filtered = items.slice();
+      paginateAndRender();
     });
-  };
-  loop();
-}
-
- function init(){
-  fetchAllProducts(items=>{
-    console.log("Products loaded:", items.length, items.slice(0,3)); // debug
-    S.all = items;
-    collectFromProducts(items); // builds option names + values
-    buildTabsAndPanels();
-    S.filtered = items.slice();
-    paginateAndRender();
-  });
-}
+  }
 
   init();
 
   /* ---------- Helpers: mount placement ---------- */
-function ensureRootInserted() {
-  // Look for the custom mount point placed on your page
-  const custom = document.querySelector('#ff-mount');
-  if (custom) {
+  function ensureRootInserted(){
+    // Prefer a custom mount point if present
+    const custom = document.querySelector('#ff-mount');
+    if (custom){
+      let el = document.getElementById('ff-root');
+      if (!el){
+        el = document.createElement('section');
+        el.id = 'ff-root';
+        custom.appendChild(el);
+      }
+      return el;
+    }
+    // Fallback: insert above Ecwid widget
     let el = document.getElementById('ff-root');
-    if (!el) {
-      el = document.createElement('section');
-      el.id = 'ff-root';
-      custom.appendChild(el);
+    if (el) return el;
+    el = document.createElement('section');
+    el.id = 'ff-root';
+    const ecwidMount = document.querySelector('#my-store, #ecwid-store, .ec-store');
+    if (ecwidMount && ecwidMount.parentNode){
+      ecwidMount.parentNode.insertBefore(el, ecwidMount);
+    } else {
+      document.body.insertAdjacentElement('afterbegin', el);
     }
     return el;
   }
-
-  // fallback if no custom mount exists
-  let el = document.getElementById('ff-root');
-  if (el) return el;
-
-  el = document.createElement('section');
-  el.id = 'ff-root';
-
-  const ecwidMount = document.querySelector('#my-store, #ecwid-store, .ec-store');
-  if (ecwidMount && ecwidMount.parentNode) {
-    ecwidMount.parentNode.insertBefore(el, ecwidMount);
-  } else {
-    document.body.insertAdjacentElement('afterbegin', el);
-  }
-
-  return el;
-}
-
 });
-
-
-
-
