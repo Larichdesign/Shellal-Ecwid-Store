@@ -1,43 +1,67 @@
 /* ============================================================
    ECWID — Storefront JS API Filters + Grid + Pagination
-   - Tabs (titles) come from OPTION or ATTRIBUTE NAMES
-   - Checkbox values come from OPTION CHOICES or ATTRIBUTE VALUES
-   - No tokens; runs via Ecwid.OnAPILoaded + Ecwid.API.get
+   - Tabs (titles) from OPTION or ATTRIBUTE names
+   - Checkbox values from OPTION choices or ATTRIBUTE values
+   - Works from a custom code iframe (finds API in parent/top)
    ============================================================ */
 
 Ecwid.OnAPILoaded.add(() => {
   console.log("✅ Ecwid Storefront JS API is ready");
 
-   // --- PROBE: print store id and first product names so we know API works here ---
-function probe(){
-  if (!window.Ecwid || !Ecwid.API || typeof Ecwid.API.get !== 'function'){
-    console.log('[FF] probe: Ecwid.API.get not ready');
-    return;
+  /* ---------------- CROSS-FRAME HELPERS ---------------- */
+  // Find the window that actually hosts Ecwid.API (this iframe, parent, or top)
+  function findEcwidCtx(){
+    const candidates = [window, window.parent, window.top];
+    for (const ctx of candidates){
+      try{
+        if (ctx && ctx.Ecwid && ctx.Ecwid.API && typeof ctx.Ecwid.API.get === "function"){
+          return ctx; // the window object that holds Ecwid
+        }
+      }catch(e){}
     }
-  Ecwid.API.get('storeProfile', {}, res => {
-    console.log('[FF] storeProfile.id:', res && res.id);
-  });
-  Ecwid.API.get('products', { limit: 5, includeFields: 'id,name' }, res => {
-    const names = (res && res.items || []).map(i => i.name);
-    console.log('[FF] probe products:', (res && res.count) || (res && res.items && res.items.length) || 0, names);
-  });
-}
-// run the probe a couple of times in case the widget is late
-setTimeout(probe, 0);
-setTimeout(probe, 800);
-setTimeout(probe, 1600);
+    return null;
+  }
 
+  // Call cb(API, Ecwid, ctx) once the API really exists (even if in another frame)
+  function whenAPIready(cb){
+    const tryNow = () => {
+      const ctx = findEcwidCtx();
+      if (ctx){
+        cb(ctx.Ecwid.API, ctx.Ecwid, ctx);
+        return true;
+      }
+      return false;
+    };
+    if (tryNow()) return;
+    const iv = setInterval(() => { if (tryNow()) clearInterval(iv); }, 150);
+    setTimeout(() => clearInterval(iv), 15000);
+  }
 
-  /* ------------------ CONFIG ------------------ */
-  const preferredNames = ["Color", "Durability", "Category", "Designer"]; // show these first if present
-  const whitelist = false;          // true => show only preferredNames even if others exist
-  const pageSize = 12;              // items per page
-  const maxProductsToLoad = 800;    // safety cap (batches of 100)
+  /* ---------------- PROBE LOGS (for debugging) ---------------- */
+  function probe(){
+    whenAPIready((API) => {
+      API.get("storeProfile", {}, res => console.log("[FF] storeProfile.id:", res && res.id));
+      API.get("products", { limit: 5, enabled: true, includeFields: "id,name" }, res => {
+        const names = (res && res.items || []).map(i => i.name);
+        const count = (res && res.count) || (res && res.items && res.items.length) || 0;
+        console.log("[FF] probe products:", count, names);
+      });
+    });
+  }
+  setTimeout(probe, 0);
+  setTimeout(probe, 800);
+  setTimeout(probe, 1600);
 
-  /* -------------- DOM INJECTION --------------- */
+  /* ---------------- CONFIG ---------------- */
+  const preferredNames = ["Color", "Durability", "Category", "Designer"]; // shown first if present
+  const whitelist = false;               // true => only show preferredNames
+  const pageSize = 12;                   // items per page
+  const maxProductsToLoad = 800;         // safety cap
+
+  /* ---------------- DOM MOUNT ---------------- */
   const mount = ensureRootInserted();
 
-  // Styles
+  /* ---------------- STYLES ---------------- */
   const style = document.createElement("style");
   style.textContent = `
     :root{
@@ -91,7 +115,7 @@ setTimeout(probe, 1600);
   `;
   document.head.appendChild(style);
 
-  // HTML shell
+  /* ---------------- SHELL ---------------- */
   mount.innerHTML = `
     <div class="ff-header">
       <div class="ff-kicker">Filter fabric by:</div>
@@ -104,17 +128,17 @@ setTimeout(probe, 1600);
     <nav class="ff-pagination" id="ff-pagination" aria-label="Products pagination"></nav>
   `;
 
-  /* --------------- STATE ---------------- */
+  /* ---------------- STATE ---------------- */
   const S = {
     all: [],
     optionNames: [],
-    optionValues: {}, // { name: Set(values) } (from options or attributes)
-    selected: {},     // { name: Set(selectedValues) }
+    optionValues: {},  // { name: Set(values) }
+    selected: {},      // { name: Set(selectedValues) }
     page: 1,
     filtered: []
   };
 
-  /* --------------- HELPERS -------------- */
+  /* ---------------- UTILS ---------------- */
   const ensureSetsFor = (name) => {
     if (!S.optionValues[name]) S.optionValues[name] = new Set();
     if (!S.selected[name]) S.selected[name] = new Set();
@@ -123,7 +147,6 @@ setTimeout(probe, 1600);
   const findOption = (p, n) => (p.options || []).find(o => o && o.name === n);
   const findAttr   = (p, n) => (p.attributes || []).find(a => a && a.name === n);
 
-  // Subline prefers attributes, falls back to first option choice
   function sublineFromPreferred(p){
     const look = preferredNames.concat(S.optionNames.filter(n=>!preferredNames.includes(n)));
     for (const n of look){
@@ -139,27 +162,26 @@ setTimeout(probe, 1600);
     return "";
   }
 
-  /* ------- BUILD TABS/PANELS ---------- */
-  const tabsWrap = mount.querySelector("#ff-tabs");
+  /* ---------------- ELEMENTS ---------------- */
+  const tabsWrap   = mount.querySelector("#ff-tabs");
   const panelsWrap = mount.querySelector("#ff-panels");
-  const overlay = mount.querySelector("#ff-overlay");
-  const grid = mount.querySelector("#ff-grid");
-  const pager = mount.querySelector("#ff-pagination");
-  const resetAllBtn = mount.querySelector("#ff-reset-all");
+  const overlay    = mount.querySelector("#ff-overlay");
+  const grid       = mount.querySelector("#ff-grid");
+  const pager      = mount.querySelector("#ff-pagination");
+  const resetAllBtn= mount.querySelector("#ff-reset-all");
 
+  /* ---------------- TABS + PANELS ---------------- */
   function buildTabsAndPanels(){
     tabsWrap.innerHTML = "";
     panelsWrap.innerHTML = "";
 
     S.optionNames.forEach(name=>{
-      // tab
       const btn = document.createElement("button");
       btn.className = "ff-tab";
       btn.dataset.panel = name;
       btn.textContent = name;
       tabsWrap.appendChild(btn);
 
-      // panel
       const panel = document.createElement("div");
       panel.className = "ff-panel";
       panel.id = `panel-${name}`;
@@ -188,7 +210,6 @@ setTimeout(probe, 1600);
       S.selected[name] = S.selected[name] || new Set();
     });
 
-    // "Show All"
     const showAll = document.createElement("button");
     showAll.className = "ff-tab ff-showall";
     showAll.dataset.panel = "__all";
@@ -262,7 +283,7 @@ setTimeout(probe, 1600);
     });
   }
 
-  /* ---------- RENDER GRID + PAGINATION ---------- */
+  /* ---------------- GRID + PAGINATION ---------------- */
   function renderGrid(slice){
     if (!slice.length){
       grid.innerHTML = `<div style="color:#666">No products match your filters.</div>`;
@@ -326,8 +347,7 @@ setTimeout(probe, 1600);
     renderPagination(total);
   }
 
-  /* --------------- FILTERING --------------- */
-  // Match selected values against either options OR attributes
+  /* ---------------- FILTERING ---------------- */
   function applyFilters(){
     const active = Object.entries(S.selected).filter(([,set])=>set.size);
     if (!active.length){
@@ -335,22 +355,20 @@ setTimeout(probe, 1600);
     } else {
       S.filtered = S.all.filter(p=>{
         return active.every(([name,set])=>{
-          const selectedValues = Array.from(set);
+          const selected = Array.from(set);
 
-          // Option-based
           let optionMatch = false;
           const def = findOption(p, name);
           if (def && Array.isArray(def.choices) && def.choices.length){
             const vals = def.choices.map(c => c.text);
-            optionMatch = selectedValues.some(s => vals.includes(s));
+            optionMatch = selected.some(s => vals.includes(s));
           }
 
-          // Attribute-based
           let attributeMatch = false;
           const att = findAttr(p, name);
           if (att){
             const val = String(att.value || att.valueText || att.text || "");
-            attributeMatch = val && selectedValues.includes(val);
+            attributeMatch = val && selected.includes(val);
           }
 
           return optionMatch || attributeMatch;
@@ -367,185 +385,153 @@ setTimeout(probe, 1600);
     applyFilters();
   };
 
-  /* --------------- LOAD PRODUCTS --------------- */
-function collectFromProducts(items){
-  const namesFound = new Set();
+  /* ---------------- LOAD PRODUCTS ---------------- */
+  function collectFromProducts(items){
+    const namesFound = new Set();
 
-  items.forEach(p=>{
-    // options
-    (p.options || []).forEach(opt=>{
-      if (!opt || !opt.name) return;
-      namesFound.add(opt.name);
-      ensureSetsFor(opt.name);
-      (opt.choices || []).forEach(ch=>{
-        const v = ch && (ch.text || ch.value || ch.title);
-        if (v) S.optionValues[opt.name].add(String(v));
+    items.forEach(p=>{
+      (p.options || []).forEach(opt=>{
+        if (!opt || !opt.name) return;
+        namesFound.add(opt.name);
+        ensureSetsFor(opt.name);
+        (opt.choices || []).forEach(ch=>{
+          const v = ch && (ch.text || ch.value || ch.title);
+          if (v) S.optionValues[opt.name].add(String(v));
+        });
+      });
+
+      (p.attributes || []).forEach(att=>{
+        const n = att && att.name;
+        const v = att && (att.value || att.valueText || att.text);
+        if (!n || !v) return;
+        namesFound.add(n);
+        ensureSetsFor(n);
+        S.optionValues[n].add(String(v));
       });
     });
 
-    // attributes
-    (p.attributes || []).forEach(att=>{
-      const n = att && att.name;
-      const v = att && (att.value || att.valueText || att.text);
-      if (!n || !v) return;
-      namesFound.add(n);
-      ensureSetsFor(n);
-      S.optionValues[n].add(String(v));
+    const allNames = Array.from(namesFound);
+    const preferred = preferredNames.filter(n => allNames.includes(n));
+    S.optionNames = whitelist ? preferred : (preferred.length ? preferred : allNames);
+    S.optionNames.forEach(ensureSetsFor);
+  }
+
+  function fetchAllProducts(cb){
+    whenAPIready((API) => {
+      const batch = 100;
+      let offset = 0;
+      const out = [];
+
+      const params = {
+        limit: batch,
+        offset,
+        enabled: true, // only products displayed on storefront
+        includeFields: "id,name,thumbnailUrl,imageUrl,created,options,attributes"
+      };
+
+      const loop = () => {
+        params.offset = offset;
+        API.get("products", params, (res) => {
+          const items = (res && res.items) ? res.items : [];
+          out.push(...items);
+          if (items.length === batch && out.length < maxProductsToLoad){
+            offset += batch; loop();
+          } else {
+            if (!out.length){
+              console.warn("[FF] 1st try returned 0 items. Retrying without includeFields…");
+              fallbackFetch(cb);
+            } else {
+              console.log("[FF] Products loaded (enabled only):", out.length);
+              cb(out);
+            }
+          }
+        });
+      };
+
+      const fallbackFetch = (done)=>{
+        let off = 0; const acc = [];
+        const p = { limit: batch, offset: off, enabled: true };
+        const step = ()=>{
+          p.offset = off;
+          API.get("products", p, (res)=>{
+            const items = (res && res.items) ? res.items : [];
+            acc.push(...items);
+            if (items.length === batch && acc.length < maxProductsToLoad){
+              off += batch; step();
+            } else {
+              console.log("[FF] Products loaded (fallback, enabled only):", acc.length);
+              done(acc);
+            }
+          });
+        };
+        step();
+      };
+
+      loop();
     });
-  });
+  }
 
-  const allNames = Array.from(namesFound);
-  const preferred = preferredNames.filter(n => allNames.includes(n));
-
-  // If nothing found, keep empty tabs list but still render the grid
-  S.optionNames = whitelist ? preferred : (preferred.length ? preferred : allNames);
-  S.optionNames.forEach(ensureSetsFor);
-}
-
-
-function fetchAllProducts(cb){
-  const batch = 100;
-  let offset = 0;
-  const out = [];
-
-  // 👉 only fetch products that are displayed on storefront (enabled)
-  const params = {
-    limit: batch,
-    offset,
-    enabled: true,                // <— key line
-    // inStock: true,             // <— uncomment if you only want in-stock
-    includeFields: "id,name,thumbnailUrl,imageUrl,created,options,attributes"
-  };
-
-  const loop = () => {
-    params.offset = offset;
-    Ecwid.API.get("products", params, (res) => {
-      const items = (res && res.items) ? res.items : [];
-      out.push(...items);
-
-      if (items.length === batch && out.length < maxProductsToLoad){
-        offset += batch;
-        loop();
-      } else {
-        if (!out.length){
-          console.warn("[FF] 1st try returned 0 items. Retrying without includeFields…");
-          // Fallback retry while keeping enabled filter
-          fallbackFetch(cb);
-        } else {
-          console.log("[FF] Products loaded (enabled only):", out.length);
-          cb(out);
-        }
-      }
-    });
-  };
-
-  const fallbackFetch = (done)=>{
-    let off = 0; const acc = [];
-    const p = { limit: batch, offset: off, enabled: true /*, inStock: true*/ };
-    const step = ()=>{
-      p.offset = off;
-      Ecwid.API.get("products", p, (res)=>{
-        const items = (res && res.items) ? res.items : [];
-        acc.push(...items);
-        if (items.length === batch && acc.length < maxProductsToLoad){
-          off += batch; step();
-        } else {
-          console.log("[FF] Products loaded (fallback, enabled only):", acc.length);
-          done(acc);
-        }
-      });
-    };
-    step();
-  };
-
-  loop();
-}
-// wait until API exists
-// wait until API exists
-function whenAPIready(cb){
-  if (window.Ecwid && Ecwid.API && typeof Ecwid.API.get === 'function') return cb();
-  const iv = setInterval(() => {
-    if (window.Ecwid && Ecwid.API && typeof Ecwid.API.get === 'function'){
-      clearInterval(iv); cb();
-    }
-  }, 150);
-  setTimeout(() => clearInterval(iv), 12000);
-}
-
-// boot only once
-let ffBooted = false;
-function bootOnce(){
-  if (ffBooted) return;
-  ffBooted = true;
-  console.log('[FF] bootOnce → init()');
-  whenAPIready(init);
-}
-
-// trigger paths
-whenAPIready(init);                      // normal path
-if (Ecwid && Ecwid.OnPageLoaded) {
-  Ecwid.OnPageLoaded.add((page) => {
-    console.log('[FF] OnPageLoaded:', page?.type || 'unknown');
-    bootOnce();                          // delayed widget path
-  });
-}
-setTimeout(bootOnce, 2500);              // last-resort fallback
-
-
-
+  /* ---------------- INIT + BOOT ---------------- */
   function init(){
-  console.log('[FF] init()');
-  fetchAllProducts(items=>{
-    console.log('⚠️ FETCH RESULT:', { count: items.length, sample: items.slice(0,5) });
+    console.log("[FF] init()");
+    fetchAllProducts(items=>{
+      console.log("⚠️ FETCH RESULT:", { count: items.length, sample: items.slice(0,5) });
+      S.all = items;
+      collectFromProducts(items);
 
-    S.all = items;
-    collectFromProducts(items);
+      if (S.optionNames.length){
+        buildTabsAndPanels();
+      } else {
+        tabsWrap.innerHTML = ""; // no tabs if no option/attribute names
+      }
 
-    if (S.optionNames.length){
-      buildTabsAndPanels();
-    } else {
-      document.querySelector('#ff-tabs').innerHTML = '';
-    }
+      S.filtered = items.slice();
+      paginateAndRender();
+    });
+  }
 
-    S.filtered = items.slice();
-    paginateAndRender();
-  });
-}
+  let ffBooted = false;
+  function bootOnce(){
+    if (ffBooted) return;
+    ffBooted = true;
+    console.log("[FF] bootOnce → init()");
+    whenAPIready(() => init());
+  }
 
+  // Trigger init along multiple paths to survive late widget loads
+  whenAPIready(() => init()); // normal path
+  if (window.Ecwid && window.Ecwid.OnPageLoaded) {
+    window.Ecwid.OnPageLoaded.add((page) => {
+      console.log("[FF] OnPageLoaded:", page?.type || "unknown");
+      bootOnce();
+    });
+  }
+  setTimeout(bootOnce, 2500); // last-resort fallback
 
-
-  whenAPIready(init);
-
-  /* ---------- Helpers: mount placement ---------- */
+  /* ---------------- MOUNT HELPER ---------------- */
   function ensureRootInserted(){
     // Prefer a custom mount point if present
-    const custom = document.querySelector('#ff-mount');
+    const custom = document.querySelector("#ff-mount");
     if (custom){
-      let el = document.getElementById('ff-root');
+      let el = document.getElementById("ff-root");
       if (!el){
-        el = document.createElement('section');
-        el.id = 'ff-root';
+        el = document.createElement("section");
+        el.id = "ff-root";
         custom.appendChild(el);
       }
       return el;
     }
     // Fallback: insert above Ecwid widget
-    let el = document.getElementById('ff-root');
+    let el = document.getElementById("ff-root");
     if (el) return el;
-    el = document.createElement('section');
-    el.id = 'ff-root';
-    const ecwidMount = document.querySelector('#my-store, #ecwid-store, .ec-store');
+    el = document.createElement("section");
+    el.id = "ff-root";
+    const ecwidMount = document.querySelector("#my-store, #ecwid-store, .ec-store");
     if (ecwidMount && ecwidMount.parentNode){
       ecwidMount.parentNode.insertBefore(el, ecwidMount);
     } else {
-      document.body.insertAdjacentElement('afterbegin', el);
+      document.body.insertAdjacentElement("afterbegin", el);
     }
     return el;
   }
 });
-
-
-
-
-
-
