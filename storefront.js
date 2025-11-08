@@ -4,11 +4,11 @@
    - Checkbox values from OPTION choices or ATTRIBUTE values
    - Works from a custom code iframe (finds API in parent/top)
    ============================================================ */
-
+/*
 Ecwid.OnAPILoaded.add(() => {
   console.log("✅ Ecwid Storefront JS API is ready");
 
-  /* ---------------- CROSS-FRAME HELPERS ---------------- */
+ // ---------------- CROSS-FRAME HELPERS ---------------- 
   // Find the window that actually hosts Ecwid.API (this iframe, parent, or top)
   function findEcwidCtx(){
     const candidates = [window, window.parent, window.top];
@@ -37,7 +37,7 @@ Ecwid.OnAPILoaded.add(() => {
     setTimeout(() => clearInterval(iv), 15000);
   }
 
-  /* ---------------- PROBE LOGS (for debugging) ---------------- */
+  // ---------------- PROBE LOGS (for debugging) ---------------- 
   function probe(){
     whenAPIready((API) => {
       API.get("storeProfile", {}, res => console.log("[FF] storeProfile.id:", res && res.id));
@@ -52,16 +52,16 @@ Ecwid.OnAPILoaded.add(() => {
   setTimeout(probe, 800);
   setTimeout(probe, 1600);
 
-  /* ---------------- CONFIG ---------------- */
+  // ---------------- CONFIG ---------------- 
   const preferredNames = ["Color", "Durability", "Category", "Designer"]; // shown first if present
   const whitelist = false;               // true => only show preferredNames
   const pageSize = 12;                   // items per page
   const maxProductsToLoad = 800;         // safety cap
 
-  /* ---------------- DOM MOUNT ---------------- */
+  // ---------------- DOM MOUNT ----------------
   const mount = ensureRootInserted();
 
-  /* ---------------- STYLES ---------------- */
+  //---------------- STYLES ----------------
   const style = document.createElement("style");
   style.textContent = `
     :root{
@@ -115,7 +115,7 @@ Ecwid.OnAPILoaded.add(() => {
   `;
   document.head.appendChild(style);
 
-  /* ---------------- SHELL ---------------- */
+  // ---------------- SHELL ----------------
   mount.innerHTML = `
     <div class="ff-header">
       <div class="ff-kicker">Filter fabric by:</div>
@@ -128,7 +128,7 @@ Ecwid.OnAPILoaded.add(() => {
     <nav class="ff-pagination" id="ff-pagination" aria-label="Products pagination"></nav>
   `;
 
-  /* ---------------- STATE ---------------- */
+  // ---------------- STATE ---------------- 
   const S = {
     all: [],
     optionNames: [],
@@ -138,7 +138,7 @@ Ecwid.OnAPILoaded.add(() => {
     filtered: []
   };
 
-  /* ---------------- UTILS ---------------- */
+  // ---------------- UTILS ---------------- 
   const ensureSetsFor = (name) => {
     if (!S.optionValues[name]) S.optionValues[name] = new Set();
     if (!S.selected[name]) S.selected[name] = new Set();
@@ -162,7 +162,7 @@ Ecwid.OnAPILoaded.add(() => {
     return "";
   }
 
-  /* ---------------- ELEMENTS ---------------- */
+  // ---------------- ELEMENTS ---------------- 
   const tabsWrap   = mount.querySelector("#ff-tabs");
   const panelsWrap = mount.querySelector("#ff-panels");
   const overlay    = mount.querySelector("#ff-overlay");
@@ -170,7 +170,7 @@ Ecwid.OnAPILoaded.add(() => {
   const pager      = mount.querySelector("#ff-pagination");
   const resetAllBtn= mount.querySelector("#ff-reset-all");
 
-  /* ---------------- TABS + PANELS ---------------- */
+  // ---------------- TABS + PANELS ---------------- 
   function buildTabsAndPanels(){
     tabsWrap.innerHTML = "";
     panelsWrap.innerHTML = "";
@@ -283,7 +283,7 @@ Ecwid.OnAPILoaded.add(() => {
     });
   }
 
-  /* ---------------- GRID + PAGINATION ---------------- */
+  // ---------------- GRID + PAGINATION ---------------- 
   function renderGrid(slice){
     if (!slice.length){
       grid.innerHTML = `<div style="color:#666">No products match your filters.</div>`;
@@ -347,7 +347,7 @@ Ecwid.OnAPILoaded.add(() => {
     renderPagination(total);
   }
 
-  /* ---------------- FILTERING ---------------- */
+  // ---------------- FILTERING ---------------- 
   function applyFilters(){
     const active = Object.entries(S.selected).filter(([,set])=>set.size);
     if (!active.length){
@@ -385,7 +385,7 @@ Ecwid.OnAPILoaded.add(() => {
     applyFilters();
   };
 
-  /* ---------------- LOAD PRODUCTS ---------------- */
+  // ---------------- LOAD PRODUCTS ---------------- 
   function collectFromProducts(items){
     const namesFound = new Set();
 
@@ -471,7 +471,7 @@ Ecwid.OnAPILoaded.add(() => {
     });
   }
 
-  /* ---------------- INIT + BOOT ---------------- */
+  // ---------------- INIT + BOOT ---------------- 
   function init(){
     console.log("[FF] init()");
     fetchAllProducts(items=>{
@@ -508,7 +508,7 @@ Ecwid.OnAPILoaded.add(() => {
   }
   setTimeout(bootOnce, 2500); // last-resort fallback
 
-  /* ---------------- MOUNT HELPER ---------------- */
+  // ---------------- MOUNT HELPER ---------------- 
   function ensureRootInserted(){
     // Prefer a custom mount point if present
     const custom = document.querySelector("#ff-mount");
@@ -535,3 +535,5 @@ Ecwid.OnAPILoaded.add(() => {
     return el;
   }
 });
+
+*/
