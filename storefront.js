@@ -1,3 +1,11 @@
+/* Hide categories grid on product listing pages */
+.grid_categories,
+.grid__categories,
+.grid-categories,
+div[class*="grid_categories"] {
+    display: none !important;
+}
+
 /* ============================================================
    ECWID — Storefront JS API Filters + Grid + Pagination
    - Tabs (titles) from OPTION or ATTRIBUTE names
@@ -537,3 +545,4 @@ Ecwid.OnAPILoaded.add(() => {
 });
 
 */
+
