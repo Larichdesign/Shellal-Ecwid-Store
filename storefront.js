@@ -1,7 +1,4 @@
-const element = document.querySelector('.form-control__select-text');
-    if (element) {
-      element.textContent = 'Search';
-    }
+
        
 /* ============================================================
    ECWID — Storefront JS API Filters + Grid + Pagination
@@ -9,10 +6,13 @@ const element = document.querySelector('.form-control__select-text');
    - Checkbox values from OPTION choices or ATTRIBUTE values
    - Works from a custom code iframe (finds API in parent/top)
    ============================================================ */
-/*
 Ecwid.OnAPILoaded.add(() => {
   console.log("✅ Ecwid Storefront JS API is ready");
-
+  const element = document.querySelector('.form-control__select-text');
+    if (element) {
+      element.textContent = 'Search';
+    } });
+/*
  // ---------------- CROSS-FRAME HELPERS ---------------- 
   // Find the window that actually hosts Ecwid.API (this iframe, parent, or top)
   function findEcwidCtx(){
@@ -542,5 +542,6 @@ Ecwid.OnAPILoaded.add(() => {
 });
 
 */
+
 
 
