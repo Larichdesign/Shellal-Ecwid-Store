@@ -1,4 +1,8 @@
-
+const element = document.querySelector('.form-control__select-text');
+    if (element) {
+      element.textContent = 'Search';
+    }
+       
 /* ============================================================
    ECWID — Storefront JS API Filters + Grid + Pagination
    - Tabs (titles) from OPTION or ATTRIBUTE names
@@ -538,4 +542,5 @@ Ecwid.OnAPILoaded.add(() => {
 });
 
 */
+
 
