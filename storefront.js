@@ -1,73 +1,4 @@
-<!-- Tabby On-Site Messaging -->
-<script
-  src="https://checkout.tabby.ai/tabby-promo.js"
-  data-api-key="pk_test_019a48dc-9449-c3a6-1f94-ac7a81772c7a"
-  data-merchant-code="SHN"
-  data-currency="AED">
-</script>
-
-<script>
-document.addEventListener("DOMContentLoaded", function () {
-  // Wait for Ecwid to finish rendering
-  Ecwid.OnPageLoaded.add(function(page) {
-    
-    // PRODUCT PAGE widget
-    if (page.type === "PRODUCT") {
-      const product = page.product;
-      insertTabbyWidget(product.price);
-    }
-
-    // CART PAGE widget
-    if (page.type === "CART") {
-      const subtotal = Ecwid.Cart.get().subtotal;
-      insertTabbyCartWidget(subtotal);
-    }
-
-    // CATEGORY PAGE (optional)
-    if (page.type === "CATEGORY") {
-      setTimeout(() => {
-        document.querySelectorAll(".grid-product__price-amount").forEach(el => {
-          const price = parseFloat(el.innerText.replace(/[^\d.]/g, ""));
-          const wrapper = document.createElement("div");
-          wrapper.className = "tabby-promo";
-          wrapper.dataset.amount = price;
-          el.parentNode.appendChild(wrapper);
-        });
-      }, 500);
-    }
-  });
-
-  // Insert product page widget
-  function insertTabbyWidget(amount) {
-    let target = document.querySelector(".product-details__price");
-    if (!target) return;
-
-    const box = document.createElement("div");
-    box.className = "tabby-promo";
-    box.dataset.amount = amount;
-    box.style.marginTop = "12px";
-
-    target.appendChild(box);
-    window.tabbyPromo('refresh');
-  }
-
-  // Insert cart page widget
-  function insertTabbyCartWidget(amount) {
-    let target = document.querySelector(".ec-cart-summary__total");
-    if (!target) return;
-
-    const box = document.createElement("div");
-    box.className = "tabby-promo";
-    box.dataset.amount = amount;
-    box.style.marginTop = "12px";
-
-    target.appendChild(box);
-    window.tabbyPromo('refresh');
-  }
-});
-</script>
-
-       
+     
 /* ============================================================
    ECWID — Storefront JS API Filters + Grid + Pagination
    - Tabs (titles) from OPTION or ATTRIBUTE names
@@ -608,6 +539,7 @@ Ecwid.OnAPILoaded.add(() => {
 });
 
 */
+
 
 
 
