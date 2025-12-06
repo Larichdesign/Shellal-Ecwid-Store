@@ -1,5 +1,5 @@
 var client_id = "custom-app-123237799-1"
-var image_link = "https://iili.io/fz8RtDv.png"
+var image_link = "https://iili.io/fT8bjLv.png"
 
 // function that adds an image
 var CheckoutIconLoad = function () {
