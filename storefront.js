@@ -3,7 +3,7 @@ var image_link = "https://iili.io/fuHZzw7.png"
 
 // function that adds an image
 var CheckoutIconLoad = function () {
-   var icon = "<div class='icon_resizer' style='height:22px; overflow:hidden'> <img style='width:auto; height:100%; display:block;' src='"+image_link+"'></img> </div>";
+   var icon = "<div class='icon_resizer' style='height:40px; overflow:hidden'> <img style='width:auto; height:100%; display:block;' src='"+image_link+"'></img> </div>";
    document.querySelector("label.ec-radiogroup__item--app_id-"+client_id+" div.ec-radiogroup__info:empty").innerHTML = icon;
 }
 
@@ -15,4 +15,5 @@ Ecwid.OnAPILoaded.add(function () {
       }
    });
 });
+
 
