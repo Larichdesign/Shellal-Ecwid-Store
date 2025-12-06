@@ -1,5 +1,5 @@
 var client_id = "custom-app-123237799-1"
-var image_link = "https://iili.io/fT8bjLv.png"
+var image_link = "https://iili.io/fuHZzw7.png"
 
 // function that adds an image
 var CheckoutIconLoad = function () {
@@ -15,3 +15,4 @@ Ecwid.OnAPILoaded.add(function () {
       }
    });
 });
+
