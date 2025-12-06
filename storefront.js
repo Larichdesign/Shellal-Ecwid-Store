@@ -17,7 +17,7 @@ var CheckoutIconLoad = function () {
 // ================================
 var HideStripeTerms = function () {
    var interval = setInterval(function () {
-      var termsEl = document.querySelector('.TermsText');
+      var termsEl = document.querySelector('.p-TermsText, .TermsText, .Text--terms');
 
       if (termsEl) {
          termsEl.style.display = "none";
@@ -41,3 +41,4 @@ Ecwid.OnAPILoaded.add(function () {
       }
    });
 });
+
