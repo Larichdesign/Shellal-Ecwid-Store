@@ -1,4 +1,3 @@
-<script>
 var client_id = "custom-app-123237799-1";
 var image_link = "https://iili.io/fT8bjLv.png";
 
@@ -14,17 +13,15 @@ var CheckoutIconLoad = function () {
 };
 
 // ================================
-// 2) Hide Stripe Terms Text ("By providing your card information...")
+// 2) Hide Stripe Terms Text
 // ================================
 var HideStripeTerms = function () {
    var interval = setInterval(function () {
       var termsEl = document.querySelector('.TermsText');
 
       if (termsEl) {
-         // hide the text
          termsEl.style.display = "none";
 
-         // hide the parent container as well
          var wrapper = termsEl.closest('.p-Grid');
          if (wrapper) wrapper.style.display = "none";
 
@@ -34,16 +31,13 @@ var HideStripeTerms = function () {
 };
 
 // ================================
-// Run both functions on Checkout Payment Details page//
+// 3) Ecwid event listener
 // ================================
 Ecwid.OnAPILoaded.add(function () {
    Ecwid.OnPageLoaded.add(function (page) {
-
       if (page.type === "CHECKOUT_PAYMENT_DETAILS") {
-
          CheckoutIconLoad();
          HideStripeTerms();
       }
    });
 });
-</script>
