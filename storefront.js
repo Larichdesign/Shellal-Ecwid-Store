@@ -17,7 +17,7 @@ var CheckoutIconLoad = function () {
 // ================================
 var HideStripeTerms = function () {
    var interval = setInterval(function () {
-      var termsEl = document.querySelector('.p-Grid .u-mt-grid');
+      var termsEl = document.querySelector('.de7zKgf4__p-Root');
 
       if (termsEl) {
          termsEl.style.display = "none";
@@ -41,6 +41,7 @@ Ecwid.OnAPILoaded.add(function () {
       }
    });
 });
+
 
 
 
