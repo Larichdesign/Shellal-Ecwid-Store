@@ -16,3 +16,33 @@ Ecwid.OnAPILoaded.add(function () {
    });
 });
 
+Ecwid.OnPageLoaded.add(function(page) {
+  if (page.type !== "CHECKOUT_PAYMENT_DETAILS") return;
+
+  const params = new URLSearchParams(window.location.search);
+  const errorMessage = params.get("error");
+
+  if (errorMessage) {
+    showTabbyError(decodeURIComponent(errorMessage));
+  }
+});
+
+function showTabbyError(msg) {
+
+  const container = document.createElement("div");
+  container.style.background = "#ffeeee";
+  container.style.color = "#a40000";
+  container.style.padding = "12px 15px";
+  container.style.borderRadius = "6px";
+  container.style.marginBottom = "15px";
+  container.style.fontSize = "14px";
+  container.style.border = "1px solid #dd8888";
+
+  container.textContent = msg;
+
+  const target = document.querySelector(".ecwid-Checkout-block");
+  if (target) {
+    target.prepend(container);
+  }
+}
+
