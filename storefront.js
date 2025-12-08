@@ -45,7 +45,7 @@ function hideTabbyOption() {
    ============================================================ */
 
 var client_id = "custom-app-123237799-1";
-var image_link = "https://iili.io/fuHZzw7.png";
+var image_link = "https://iili.io/fAXNFcu.png";
 
 var CheckoutIconLoad = function () {
    var icon =
@@ -72,3 +72,4 @@ Ecwid.OnAPILoaded.add(function () {
       }
    });
 });
+
