@@ -1,37 +1,40 @@
-<!-- ============ TABBY CORE SDK ============ -->
-<script src="https://checkout.tabby.ai/tabby-promo.js"></script>
-<script src="https://checkout.tabby.ai/tabby-card.js"></script>
-
-<script>
 /* ============================================================
-   REQUIRED: ECWID API LOADED
+   TABBY SDK LOADERS (must run before everything else)
+   ============================================================ */
+(function loadTabbySDK() {
+    const promo = document.createElement("script");
+    promo.src = "https://checkout.tabby.ai/tabby-promo.js";
+    document.head.appendChild(promo);
+
+    const card = document.createElement("script");
+    card.src = "https://checkout.tabby.ai/tabby-card.js";
+    document.head.appendChild(card);
+})();
+
+/* ============================================================
+   ECWID API LOADED
    ============================================================ */
 Ecwid.OnAPILoaded.add(function () {
     console.log("Ecwid API Loaded");
 
-    /* PRODUCT PAGE */
-    Ecwid.OnProductDisplayed.add(function (product) {
-        loadTabbyProductPromo(product);
-    });
+    Ecwid.OnProductDisplayed.add(loadTabbyProductPromo);
+    Ecwid.OnCartChanged.add(loadTabbyCartPromo);
 
-    /* CART PAGE */
-    Ecwid.OnCartChanged.add(function (cart) {
-        loadTabbyCartPromo(cart);
-    });
-
-    /* CHECKOUT PAGE */
     Ecwid.OnPageLoaded.add(function (page) {
         if (page.type === "CHECKOUT_PAYMENT_DETAILS") {
             loadTabbyCheckoutPromo();
             detectTabbyIneligibilityFromWorker();
+            insertTabbyPaymentIcon();
         }
     });
 });
 
 /* ============================================================
-   WORKER BASE URL
+   CONFIG
    ============================================================ */
 const WORKER_BASE = "https://shellalalnoor.com/";
+const TABBY_PUBLIC_KEY = "pk_test_019a48dc-9449-c3a6-1f94-ac7a81772c7a";
+const TABBY_MERCHANT_CODE = "SHN";
 
 /* ============================================================
    1. PRODUCT PAGE PROMO
@@ -41,8 +44,7 @@ function loadTabbyProductPromo(product) {
     if (!price) return;
 
     const containerId = "tabby-product-promo";
-    const old = document.getElementById(containerId);
-    if (old) old.remove();
+    document.getElementById(containerId)?.remove();
 
     const priceElem = document.querySelector(".ec-price-item");
     if (!priceElem) return;
@@ -57,8 +59,8 @@ function loadTabbyProductPromo(product) {
         price: Number(price).toFixed(2),
         lang: "en",
         source: "product",
-        publicKey: "pk_test_019a48dc-9449-c3a6-1f94-ac7a81772c7a",
-        merchantCode: "SHN"
+        publicKey: TABBY_PUBLIC_KEY,
+        merchantCode: TABBY_MERCHANT_CODE
     });
 }
 
@@ -78,8 +80,9 @@ function loadTabbyCartPromo(cart) {
         div = document.createElement("div");
         div.id = containerId;
         checkoutBtn.before(div);
+    } else {
+        div.innerHTML = "";
     }
-    div.innerHTML = "";
 
     new TabbyPromo({
         selector: `#${containerId}`,
@@ -87,13 +90,13 @@ function loadTabbyCartPromo(cart) {
         price: Number(price).toFixed(2),
         lang: "en",
         source: "cart",
-        publicKey: "pk_test_019a48dc-9449-c3a6-1f94-ac7a81772c7a",
-        merchantCode: "SHN"
+        publicKey: TABBY_PUBLIC_KEY,
+        merchantCode: TABBY_MERCHANT_CODE
     });
 }
 
 /* ============================================================
-   3. CHECKOUT PAGE TABBY CARD WIDGET
+   3. CHECKOUT PAGE TABBY CARD
    ============================================================ */
 function loadTabbyCheckoutPromo() {
     const totalEl = document.querySelector(".ec-cart-summary__total .ec-price-item");
@@ -118,13 +121,13 @@ function loadTabbyCheckoutPromo() {
         price: amount,
         lang: "en",
         shouldInheritBg: false,
-        publicKey: "pk_test_019a48dc-9449-c3a6-1f94-ac7a81772c7a",
-        merchantCode: "SHN"
+        publicKey: TABBY_PUBLIC_KEY,
+        merchantCode: TABBY_MERCHANT_CODE
     });
 }
 
 /* ============================================================
-   4. DETECT INELIGIBILITY REDIRECT FROM WORKER
+   4. DETECT INELIGIBILITY FROM WORKER
    ============================================================ */
 function detectTabbyIneligibilityFromWorker() {
     const url = new URL(window.location.href);
@@ -136,13 +139,12 @@ function detectTabbyIneligibilityFromWorker() {
 }
 
 /* ============================================================
-   5. SHOW ERROR IN ECWID NOTICE BOX
+   5. SHOW ECWID NOTICE
    ============================================================ */
 function showEcwidErrorNotice(message) {
     const ecwidNotices = document.querySelector(".ec-notices");
     if (!ecwidNotices) return;
 
-    // Remove previous custom message
     document.querySelectorAll(".tabby-error-notice").forEach(e => e.remove());
 
     const div = document.createElement("div");
@@ -168,26 +170,21 @@ function showEcwidErrorNotice(message) {
     ecwidNotices.appendChild(div);
 
     div.querySelector(".ec-notice__close").onclick = () => div.remove();
-
     setTimeout(() => div.remove(), 8000);
 }
 
 /* ============================================================
-   6. OPTIONAL — DISPLAY ICON FOR TABBY PAYMENT OPTION
+   6. OPTIONAL — TABBY ICON NEAR PAYMENT OPTION
    ============================================================ */
-Ecwid.OnPageLoaded.add(function(page) {
-    if (page.type !== "CHECKOUT_PAYMENT_DETAILS") return;
-
+function insertTabbyPaymentIcon() {
     const client_id = "custom-app-XXXX-1"; // replace with YOUR Ecwid payment method ID
-    const image_link = "https://iili.io/fAq4ehF.jpg"; // your icon
+    const image_link = "https://iili.io/fAq4ehF.jpg";
 
-    const selector = "label.ec-radiogroup__item--app_id-" + client_id + " .ec-radiogroup__info";
-    let target = document.querySelector(selector);
+    const selector =
+        "label.ec-radiogroup__item--app_id-" + client_id + " .ec-radiogroup__info";
 
-    if (!target) {
-        setTimeout(() => Ecwid.OnPageLoaded.dispatch(page), 300);
-        return;
-    }
+    const target = document.querySelector(selector);
+    if (!target) return;
 
     if (target.innerHTML.trim() === "") {
         target.innerHTML = `
@@ -196,5 +193,4 @@ Ecwid.OnPageLoaded.add(function(page) {
             </div>
         `;
     }
-});
-</script>
+}
