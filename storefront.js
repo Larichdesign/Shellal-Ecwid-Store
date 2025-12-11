@@ -177,7 +177,7 @@ function showEcwidErrorNotice(message) {
    6. OPTIONAL — TABBY ICON NEAR PAYMENT OPTION
    ============================================================ */
 function insertTabbyPaymentIcon() {
-    const client_id = "custom-app-XXXX-1"; // replace with YOUR Ecwid payment method ID
+    const client_id = "custom-app-123237799-1"; // replace with YOUR Ecwid payment method ID
     const image_link = "https://iili.io/fAq4ehF.jpg";
 
     const selector =
@@ -194,3 +194,4 @@ function insertTabbyPaymentIcon() {
         `;
     }
 }
+
