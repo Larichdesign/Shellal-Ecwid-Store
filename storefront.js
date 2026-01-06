@@ -5,17 +5,16 @@ var image_link = "https://iili.io/fAXNFcu.png";
    Add Tabby icon
 ------------------------------ */
 function CheckoutIconLoad() {
-  var selector =
-    "label.ec-radiogroup__item--app_id-" +
-    client_id +
-    " div.ec-radiogroup__info:empty";
+  var container = document.querySelector(
+    ".ec-radiogroup__item--app_id-" + client_id +
+    " .ec-radiogroup__info"
+  );
 
-  var container = document.querySelector(selector);
-  if (!container) return;
+  if (!container || container.childNodes.length > 0) return;
 
   var icon =
-    "<div class='icon_resizer' style='height:40px; overflow:hidden'>" +
-    "<img style='width:auto; height:100%; display:block;' src='" +
+    "<div style='height:40px; overflow:hidden'>" +
+    "<img style='height:100%; display:block' src='" +
     image_link +
     "' />" +
     "</div>";
@@ -24,9 +23,9 @@ function CheckoutIconLoad() {
 }
 
 /* -----------------------------
-   Hide Tabby if country ≠ AE
+   Force-hide Tabby if country ≠ AE
 ------------------------------ */
-function hideTabbyIfNotAE() {
+function forceHideTabbyIfNotAE() {
   var country =
     Ecwid.Cart?.profile?.shippingAddress?.countryCode ||
     Ecwid.Cart?.profile?.billingAddress?.countryCode ||
@@ -34,26 +33,39 @@ function hideTabbyIfNotAE() {
 
   if (!country || country === "AE") return;
 
+  var attempts = 0;
+  var maxAttempts = 30;
+
   var interval = setInterval(function () {
-    var method = document.querySelector(
-      "label.ec-radiogroup__item--app_id-" + client_id
+    var tabbyNodes = document.querySelectorAll(
+      "[class*='ec-radiogroup__item--app_id-" + client_id + "']"
     );
 
-    if (method) {
-      method.style.display = "none";
+    if (tabbyNodes.length > 0) {
+      tabbyNodes.forEach(function (node) {
+        node.style.display = "none";
+      });
+    }
+
+    attempts++;
+    if (attempts >= maxAttempts) {
       clearInterval(interval);
     }
-  }, 200);
+  }, 300);
 }
 
 /* -----------------------------
-   Ecwid hooks
+   Ecwid lifecycle hooks
 ------------------------------ */
 Ecwid.OnAPILoaded.add(function () {
   Ecwid.OnPageLoaded.add(function (page) {
     if (page.type === "CHECKOUT_PAYMENT_DETAILS") {
       CheckoutIconLoad();
-      hideTabbyIfNotAE();
+      forceHideTabbyIfNotAE();
     }
+  });
+
+  Ecwid.OnCartChanged.add(function () {
+    forceHideTabbyIfNotAE();
   });
 });
