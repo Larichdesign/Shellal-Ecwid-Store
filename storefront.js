@@ -37,9 +37,7 @@ function forceHideTabbyIfNotAE() {
   var maxAttempts = 30;
 
   var interval = setInterval(function () {
-    var tabbyNodes = document.querySelectorAll(
-      ".ec-radiogroup__item--app_id-"+client_id+" div.ec-radiogroup__info:empty"
-    );
+    var tabbyNodes = document.querySelector("label.ec-radiogroup__item--app_id-"+client_id+" div.ec-radiogroup__info:empty")
 
     if (tabbyNodes.length > 0) {
       tabbyNodes.forEach(function (node) {
