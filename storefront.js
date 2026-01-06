@@ -28,41 +28,37 @@ Ecwid.OnAPILoaded.add(function () {
     if (existing) existing.remove();
   }
 
-  function initTabbyCheckoutCard() {
-    removeTabbyCard();
+function initTabbyCheckoutCard() {
+  removeTabbyCard();
 
-    // Find Tabby payment method label using your client_id
-    var tabbyLabel = document.querySelector(
-      "label.ec-radiogroup__item--app_id-" + client_id
-    );
+  var tabbyLabel = document.querySelector(
+    "label.ec-radiogroup__item--app_id-" + client_id
+  );
+  if (!tabbyLabel) return;
 
-    if (!tabbyLabel) return;
+  var totalEl = document.querySelector(".ec-order-summary-total__value");
+  if (!totalEl) return;
 
-    // Get order total
-    var totalEl = document.querySelector(".ec-order-summary-total__value");
-    if (!totalEl) return;
+  var price = cleanPrice(totalEl.innerText);
+  if (!price || price <= 0) return;
 
-    var price = cleanPrice(totalEl.innerText);
+  var card = document.createElement("div");
+  card.id = "tabbyCard";
+  card.style.marginTop = "10px";
 
-    // Create container
-    var card = document.createElement("div");
-    card.id = "tabbyCard";
-    card.style.marginTop = "10px";
+  tabbyLabel.appendChild(card);
 
-    // Insert under Tabby payment option
-    tabbyLabel.appendChild(card);
+  new TabbyCard({
+    selector: "#tabbyCard",
+    currency: "AED",
+    price: price,
+    lang: "en",
+    shouldInheritBg: true,
+    publicKey: "pk_test_019a48dc-9449-c3a6-1f94-ac7a81772c7a",
+    merchantCode: "SHN"
+  });
+}
 
-    // Init TabbyCard
-    new TabbyCard({
-      selector: "#tabbyCard",
-      currency: "AED",
-      price: price,
-      lang: "en",
-      shouldInheritBg: true,
-      publicKey: "pk_test_019a48dc-9449-c3a6-1f94-ac7a81772c7a",
-      merchantCode: "SHN"
-    });
-  }
 
   // Ecwid lifecycle-safe hook
   Ecwid.OnAPILoaded.add(function () {
@@ -74,3 +70,4 @@ Ecwid.OnAPILoaded.add(function () {
   });
 
 })();
+
