@@ -5,10 +5,7 @@ var image_link = "https://iili.io/fAXNFcu.png";
    Add Tabby icon
 ------------------------------ */
 function CheckoutIconLoad() {
-  var container = document.querySelector(
-    ".ec-radiogroup__item--app_id-" + client_id +
-    " .ec-radiogroup__info"
-  );
+  var container = document.querySelector("label.ec-radiogroup__item--app_id-"+client_id+" div.ec-radiogroup__info:empty")
 
   if (!container || container.childNodes.length > 0) return;
 
@@ -67,4 +64,5 @@ Ecwid.OnAPILoaded.add(function () {
     forceHideTabbyIfNotAE();
   });
 });
+
 
