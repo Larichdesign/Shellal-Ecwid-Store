@@ -38,7 +38,7 @@ function forceHideTabbyIfNotAE() {
 
   var interval = setInterval(function () {
     var tabbyNodes = document.querySelectorAll(
-      "[class*='ec-radiogroup__item--app_id-" + client_id + "']"
+      ".ec-radiogroup__item--app_id-"+client_id+" div.ec-radiogroup__info:empty"
     );
 
     if (tabbyNodes.length > 0) {
@@ -69,3 +69,4 @@ Ecwid.OnAPILoaded.add(function () {
     forceHideTabbyIfNotAE();
   });
 });
+
