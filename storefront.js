@@ -33,14 +33,20 @@ function insertTabbyPromo(price, source) {
   var promoDiv = document.createElement("div");
   promoDiv.id = "TabbyPromo";
   promoDiv.style.maxWidth = "100%";
+  promoDiv.style.marginTop = "10px";
 
+  // PRODUCT PAGE (correct container from your screenshots)
   if (source === "product") {
-    var priceEl = document.querySelector(".details-product-price");
-    if (priceEl && priceEl.parentNode) {
-      priceEl.parentNode.insertBefore(promoDiv, priceEl.nextSibling);
+    var controls = document.querySelector(
+      ".details-product-purchase__controls"
+    );
+
+    if (controls && controls.parentNode) {
+      controls.parentNode.insertBefore(promoDiv, controls.nextSibling);
     }
   }
 
+  // CART PAGE
   if (source === "cart") {
     var cartTotal = document.querySelector(".ec-cart-summary__total");
     if (cartTotal && cartTotal.parentNode) {
@@ -88,3 +94,4 @@ Ecwid.OnAPILoaded.add(function () {
   });
 
 });
+
