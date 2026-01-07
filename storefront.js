@@ -5,10 +5,10 @@ function addTabbyIcon() {
   var target = document.querySelector(
     "label.ec-radiogroup__item--app_id-" +
       client_id +
-      " div.ec-radiogroup__info:empty"
+      " div.ec-radiogroup__info"
   );
 
-  if (!target) return;
+  if (!target || target.children.length) return;
 
   target.innerHTML =
     "<div style='height:40px;overflow:hidden'>" +
@@ -20,10 +20,12 @@ function addTabbyIcon() {
 
 function toggleTabbyByCountry() {
   Ecwid.Cart.get(function (cart) {
-    var country = cart.shippingPerson && cart.shippingPerson.countryCode;
+    if (!cart || !cart.shippingPerson) return;
+
+    var country = cart.shippingPerson.countryCode;
 
     var tabby = document.querySelector(
-      ".ec-radiogroup__item--Pay-with-Tabby"
+      ".ec-radiogroup__item--app_id-" + client_id
     );
 
     if (!tabby) return;
@@ -32,16 +34,27 @@ function toggleTabbyByCountry() {
   });
 }
 
+function isCheckoutPage(page) {
+  if (typeof page === "string") {
+    return page.indexOf("checkout") === 0;
+  }
+
+  if (typeof page === "object" && page.type) {
+    return page.type.indexOf("CHECKOUT_") === 0;
+  }
+
+  return false;
+}
+
 Ecwid.OnAPILoaded.add(function () {
   Ecwid.OnPageLoaded.add(function (page) {
-    if (!page.startsWith("checkout")) return;
+    if (!isCheckoutPage(page)) return;
 
-    if (page === "checkout_payment_details") {
-      addTabbyIcon();
-    }
-
+    addTabbyIcon();
     toggleTabbyByCountry();
   });
 
-  Ecwid.OnCheckoutChanged.add(toggleTabbyByCountry);
+  if (Ecwid.OnCheckoutChanged && Ecwid.OnCheckoutChanged.add) {
+    Ecwid.OnCheckoutChanged.add(toggleTabbyByCountry);
+  }
 });
