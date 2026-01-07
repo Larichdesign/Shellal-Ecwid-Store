@@ -16,4 +16,56 @@ Ecwid.OnAPILoaded.add(function () {
    });
 });
 
+var TABBY_APP_ID = "custom-app-123237799-1";
+
+function hideTabby() {
+  var el = document.querySelector(
+    ".ec-radiogroup__item--app_id-" + TABBY_APP_ID
+  );
+  if (el) el.style.display = "none";
+}
+
+function showTabby() {
+  var el = document.querySelector(
+    ".ec-radiogroup__item--app_id-" + TABBY_APP_ID
+  );
+  if (el) el.style.display = "";
+}
+function evaluateCountry(countryCode) {
+  if (countryCode !== "AE") {
+    hideTabby();
+  } else {
+    showTabby();
+  }
+}
+Ecwid.OnAPILoaded.add(function () {
+  Ecwid.OnPageLoaded.add(function (page) {
+
+    // Shipping address page
+    if (page.type === "CHECKOUT_SHIPPING_ADDRESS") {
+      setTimeout(bindCountryListener, 500);
+    }
+
+    // Payment page (re-evaluate on load)
+    if (page.type === "CHECKOUT_PAYMENT_DETAILS") {
+      Ecwid.getCustomerCountry(function (country) {
+        evaluateCountry(country);
+      });
+    }
+  });
+});
+function bindCountryListener() {
+  var countrySelect = document.querySelector("select.ec-country");
+
+  if (!countrySelect) return;
+
+  // Initial state
+  evaluateCountry(countrySelect.value);
+
+  // On change
+  countrySelect.addEventListener("change", function () {
+    evaluateCountry(this.value);
+  });
+}
+
 
