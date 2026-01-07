@@ -12,9 +12,7 @@ function hideTabbyPayment() {
 
 function CheckoutIconLoad() {
   var selector =
-    "label.ec-radiogroup__item--app_id-" +
-    client_id +
-    " div.ec-radiogroup__info:empty";
+    "label.ec-radiogroup__item--app_id-" +client_id +" div.ec-radiogroup__info:empty";
 
   var el = document.querySelector(selector);
   if (!el) return;
@@ -67,3 +65,4 @@ Ecwid.OnAPILoaded.add(function () {
       });
   });
 });
+
