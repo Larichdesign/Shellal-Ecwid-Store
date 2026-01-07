@@ -1,28 +1,17 @@
-/* var client_id = "custom-app-123237799-1";
+var client_id = "custom-app-123237799-1";
 var image_link = "https://iili.io/fAXNFcu.png";
 var WORKER_BASE_URL = "https://tabby-ecwid-worker.designlarich.workers.dev";
 
 function hideTabbyPayment() {
-  var selector = "label.ec-radiogroup__item--app_id-" + client_id;
-  var el = document.querySelector(selector);
+  var el = document.querySelector("label.ec-radiogroup__item--app_id-"+client_id+" div.ec-radiogroup__info:empty")
   if (el) {
     el.style.display = "none";
   }
 }
 
 function CheckoutIconLoad() {
-  var selector =
-    "label.ec-radiogroup__item--app_id-" +client_id +" div.ec-radiogroup__info:empty";
-
-  var el = document.querySelector(selector);
-  if (!el) return;
-
-  el.innerHTML =
-    "<div class='icon_resizer' style='height:40px; overflow:hidden'>" +
-    "<img style='width:auto;height:100%;display:block' src='" +
-    image_link +
-    "' />" +
-    "</div>";
+  var icon = "<div class='icon_resizer' style='height:40px; overflow:hidden'> <img style='width:auto; height:100%; display:block;' src='"+image_link+"'></img> </div>";
+   document.querySelector("label.ec-radiogroup__item--app_id-"+client_id+" div.ec-radiogroup__info:empty").innerHTML = icon;
 }
 
 Ecwid.OnAPILoaded.add(function () {
@@ -65,6 +54,7 @@ Ecwid.OnAPILoaded.add(function () {
       });
   });
 });
+
 
 
 
