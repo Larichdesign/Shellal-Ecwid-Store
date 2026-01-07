@@ -1,10 +1,6 @@
-<script src="https://checkout.tabby.ai/tabby-promo.js"></script>
-<script src="https://checkout.tabby.ai/tabby-card.js"></script>
-
-<script>
-var client_id = "custom-app-123237799-1"; // your app client_id
-var image_link = "https://iili.io/fAXNFcu.png"; // must be https
-var WORKER_BASE_URL = "https://your-worker-domain.workers.dev"; // CHANGE THIS
+var client_id = "custom-app-123237799-1";
+var image_link = "https://iili.io/fAXNFcu.png";
+var WORKER_BASE_URL = "https://tabby-ecwid-worker.designlarich.workers.dev";
 
 function hideTabbyPayment() {
   var selector = "label.ec-radiogroup__item--app_id-" + client_id;
@@ -35,10 +31,6 @@ Ecwid.OnAPILoaded.add(function () {
   Ecwid.OnPageLoaded.add(function (page) {
     if (page.type !== "CHECKOUT_PAYMENT_DETAILS") return;
 
-    var order = Ecwid.getAppPublicConfig
-      ? Ecwid.getAppPublicConfig()
-      : null;
-
     var cart = Ecwid.getCart();
     if (!cart) return;
 
@@ -48,13 +40,11 @@ Ecwid.OnAPILoaded.add(function () {
       cart.billingPerson?.countryCode ||
       "";
 
-    // If not UAE, hide immediately (UX improvement)
     if (country !== "AE") {
       hideTabbyPayment();
       return;
     }
 
-    // Verify with backend eligibility
     fetch(
       WORKER_BASE_URL +
         "/eligibility?amount=" +
@@ -73,9 +63,7 @@ Ecwid.OnAPILoaded.add(function () {
         }
       })
       .catch(function () {
-        // Fail-safe: hide Tabby if eligibility fails
         hideTabbyPayment();
       });
   });
 });
-</script>
