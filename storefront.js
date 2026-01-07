@@ -16,56 +16,36 @@ Ecwid.OnAPILoaded.add(function () {
    });
 });
 
-var TABBY_APP_ID = "custom-app-123237799-1";
 
-function hideTabby() {
-  var el = document.querySelector(
-    ".ec-radiogroup__item--app_id-" + TABBY_APP_ID
-  );
-  if (el) el.style.display = "none";
-}
+Ecwid.OnPageLoaded.add(function (page) {
+  if (!page.startsWith("checkout")) return;
 
-function showTabby() {
-  var el = document.querySelector(
-    ".ec-radiogroup__item--app_id-" + TABBY_APP_ID
-  );
-  if (el) el.style.display = "";
-}
-function evaluateCountry(countryCode) {
-  if (countryCode !== "AE") {
-    hideTabby();
-  } else {
-    showTabby();
+  function toggleTabbyByCountry() {
+    Ecwid.Cart.get(function (cart) {
+      const countryCode = cart.shippingPerson?.countryCode;
+
+      const tabbyEl = document.querySelector(
+        ".ec-radiogroup__item--Pay-with-Tabby"
+      );
+
+      if (!tabbyEl) return;
+
+      // Show Tabby ONLY for UAE
+      if (countryCode === "AE") {
+        tabbyEl.style.display = "";
+      } else {
+        tabbyEl.style.display = "none";
+      }
+    });
   }
-}
-Ecwid.OnAPILoaded.add(function () {
-  Ecwid.OnPageLoaded.add(function (page) {
 
-    // Shipping address page
-    if (page.type === "CHECKOUT_SHIPPING_ADDRESS") {
-      setTimeout(bindCountryListener, 500);
-    }
+  // Initial check
+  toggleTabbyByCountry();
 
-    // Payment page (re-evaluate on load)
-    if (page.type === "CHECKOUT_PAYMENT_DETAILS") {
-      Ecwid.getCustomerCountry(function (country) {
-        evaluateCountry(country);
-      });
-    }
-  });
+  // Re-check when checkout updates (country change, step change)
+  Ecwid.OnCheckoutChanged.add(toggleTabbyByCountry);
 });
-function bindCountryListener() {
-  var countrySelect = document.querySelector("select.ec-country");
 
-  if (!countrySelect) return;
 
-  // Initial state
-  evaluateCountry(countrySelect.value);
-
-  // On change
-  countrySelect.addEventListener("change", function () {
-    evaluateCountry(this.value);
-  });
-}
 
 
