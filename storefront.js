@@ -1,4 +1,4 @@
-var client_id = "custom-app-123237799-1";
+/* var client_id = "custom-app-123237799-1";
 var image_link = "https://iili.io/fAXNFcu.png";
 var WORKER_BASE_URL = "https://tabby-ecwid-worker.designlarich.workers.dev";
 
@@ -65,5 +65,6 @@ Ecwid.OnAPILoaded.add(function () {
       });
   });
 });
+
 
 
