@@ -1,62 +1,47 @@
-var client_id = "custom-app-123237799-1"; // your app’s client_id
-var image_link = "https://iili.io/fAXNFcu.png"; // must be https
+var client_id = "custom-app-123237799-1";
+var image_link = "https://iili.io/fAXNFcu.png";
 
-// Add icon to Tabby payment method
-function CheckoutIconLoad() {
-  var icon =
-    "<div class='icon_resizer' style='height:40px; overflow:hidden'>" +
-    "<img style='width:auto; height:100%; display:block;' src='" +
-    image_link +
-    "' />" +
-    "</div>";
-
+function addTabbyIcon() {
   var target = document.querySelector(
     "label.ec-radiogroup__item--app_id-" +
       client_id +
       " div.ec-radiogroup__info:empty"
   );
 
-  if (target) {
-    target.innerHTML = icon;
-  }
+  if (!target) return;
+
+  target.innerHTML =
+    "<div style='height:40px;overflow:hidden'>" +
+    "<img src='" +
+    image_link +
+    "' style='height:100%;width:auto;display:block'>" +
+    "</div>";
 }
 
-// Show / hide Tabby based on shipping country
 function toggleTabbyByCountry() {
   Ecwid.Cart.get(function (cart) {
-    var countryCode = cart.shippingPerson && cart.shippingPerson.countryCode;
+    var country = cart.shippingPerson && cart.shippingPerson.countryCode;
 
-    var tabbyEl = document.querySelector(
+    var tabby = document.querySelector(
       ".ec-radiogroup__item--Pay-with-Tabby"
     );
 
-    if (!tabbyEl) return;
+    if (!tabby) return;
 
-    // Show ONLY for UAE
-    if (countryCode === "AE") {
-      tabbyEl.style.display = "";
-    } else {
-      tabbyEl.style.display = "none";
-    }
+    tabby.style.display = country === "AE" ? "" : "none";
   });
 }
 
-// Run logic when Ecwid is ready
 Ecwid.OnAPILoaded.add(function () {
   Ecwid.OnPageLoaded.add(function (page) {
     if (!page.startsWith("checkout")) return;
 
-    // Add icon only on payment step
     if (page === "checkout_payment_details") {
-      CheckoutIconLoad();
+      addTabbyIcon();
     }
 
-    // Always enforce country rule during checkout
     toggleTabbyByCountry();
   });
 
-  // Re-run when checkout updates (country change, step change)
-  Ecwid.OnCheckoutChanged.add(function () {
-    toggleTabbyByCountry();
-  });
+  Ecwid.OnCheckoutChanged.add(toggleTabbyByCountry);
 });
