@@ -1,69 +1,19 @@
-var client_id = "custom-app-123237799-1";
-var image_link = "https://iili.io/fAXNFcu.png";
-var WORKER_BASE_URL = "https://tabby-ecwid-worker.designlarich.workers.dev";
+var client_id = "custom-app-123237799-1"  //  your app’s client_id
+var image_link = "https://iili.io/fAXNFcu.png"  //  your image URL (must be https)
 
-function hideTabbyPayment() {
-  var el = document.querySelector("label.ec-radiogroup__item--app_id-"+client_id)
-  if (el) {
-    el.style.display = "none";
-  }
-}
-
-function showTabbyPayment() {
-  var el = document.querySelector("label.ec-radiogroup__item--app_id-"+client_id)
-  if (el) el.style.display = "";
-}
-
-
-function CheckoutIconLoad() {
-  var icon = "<div class='icon_resizer' style='height:40px; overflow:hidden'> <img style='width:auto; height:100%; display:block;' src='"+image_link+"'></img> </div>";
+// function that adds an image
+var CheckoutIconLoad = function () {
+   var icon = "<div class='icon_resizer' style='height:40px; overflow:hidden'> <img style='width:auto; height:100%; display:block;' src='"+image_link+"'></img> </div>";
    document.querySelector("label.ec-radiogroup__item--app_id-"+client_id+" div.ec-radiogroup__info:empty").innerHTML = icon;
 }
 
+// call function on the page load
 Ecwid.OnAPILoaded.add(function () {
-  Ecwid.OnPageLoaded.add(function (page) {
-    if (page.type !== "CHECKOUT_PAYMENT_DETAILS") return;
-
-    hideTabbyPayment();
-
-    var cart = Ecwid.getCart();
-    if (!cart) return;
-
-    var amount = cart.total;
-    var country =
-      cart.shippingPerson?.countryCode ||
-      cart.billingPerson?.countryCode ||
-      "";
-
-    if (country == "AE") {
-      showTabbyPayment();
-      return;
-    }
-
-    fetch(
-      WORKER_BASE_URL +
-        "/eligibility?amount=" +
-        amount +
-        "&country=" +
-        country
-    )
-      .then(function (res) {
-        return res.json();
-      })
-      .then(function (data) {
-        if (!data.eligible) {
-          hideTabbyPayment();
-        } else {
-          CheckoutIconLoad();
-        }
-      })
-      .catch(function () {
-        hideTabbyPayment();
-      });
-  });
+   Ecwid.OnPageLoaded.add(function (page) {
+      if (page.type == "CHECKOUT_PAYMENT_DETAILS") {
+         CheckoutIconLoad();
+      }
+   });
 });
-
-
-
 
 
