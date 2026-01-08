@@ -70,20 +70,20 @@ function loadTabbyPromoScript(callback) {
   document.head.appendChild(s);
 }
 
-function renderProductTabbyPromo(product) {
+function renderProductTabbyPromoFromPage(product) {
   if (!product || !product.price) return;
 
   var containerId = "tabby-promo-product";
   if (document.getElementById(containerId)) return;
-
-  var container = document.createElement("div");
-  container.id = containerId;
 
   var priceBlock =
     document.querySelector(".ec-price") ||
     document.querySelector(".details-product-price");
 
   if (!priceBlock) return;
+
+  var container = document.createElement("div");
+  container.id = containerId;
   priceBlock.parentNode.appendChild(container);
 
   new TabbyPromo({
@@ -97,15 +97,16 @@ function renderProductTabbyPromo(product) {
   });
 }
 
+
 Ecwid.OnPageLoaded.add(function (page) {
   if (page.type !== "PRODUCT") return;
 
   loadTabbyPromoScript(function () {
-    Ecwid.Products.get(page.productId, function (product) {
-      renderProductTabbyPromo(product);
-    });
+    if (!page.product) return;
+    renderProductTabbyPromoFromPage(page.product);
   });
 });
+
 
 // --------------------- Cart ----------------------//
 
