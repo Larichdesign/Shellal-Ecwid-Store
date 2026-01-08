@@ -59,6 +59,8 @@ Ecwid.OnAPILoaded.add(function () {
   }
 });
 
+//---------- ProductPage ---------------//
+
 function loadTabbyPromoScript(callback) {
   if (window.TabbyPromo) return callback();
 
@@ -99,12 +101,13 @@ Ecwid.OnPageLoaded.add(function (page) {
   if (page.type !== "PRODUCT") return;
 
   loadTabbyPromoScript(function () {
-    Ecwid.getProduct(page.productId, function (product) {
+    Ecwid.Products.get(page.productId, function (product) {
       renderProductTabbyPromo(product);
     });
   });
 });
 
+// --------------------- Cart ----------------------//
 
 function renderCartTabbyPromo(cart) {
   if (!cart || !cart.total) return;
@@ -142,6 +145,8 @@ Ecwid.OnPageLoaded.add(function (page) {
   });
 });
 
+
+// ------------------ Checkout -----------------------//
 function loadTabbyCardScript(callback) {
   if (window.TabbyCard) return callback();
 
@@ -201,6 +206,7 @@ if (Ecwid.OnCheckoutChanged && Ecwid.OnCheckoutChanged.add) {
     Ecwid.Cart.get(renderCheckoutTabbyCard);
   });
 }
+
 
 
 
