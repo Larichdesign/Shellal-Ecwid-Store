@@ -70,26 +70,45 @@ function loadTabbyPromoScript(callback) {
   document.head.appendChild(s);
 }
 
-function renderProductTabbyPromoFromPage(product) {
-  if (!product || !product.price) return;
+function getProductPriceFromDOM() {
+  var priceEl =
+    document.querySelector(".product-details__product-price[itemprop='price']") ||
+    document.querySelector(".ec-price-item[itemprop='price']");
 
+  if (!priceEl) return null;
+
+  // Prefer structured data
+  var contentPrice = priceEl.getAttribute("content");
+  if (contentPrice) return parseFloat(contentPrice).toFixed(2);
+
+  // Fallback to visible price
+  var textPrice = priceEl.innerText.replace(/[^\d.]/g, "");
+  return textPrice ? parseFloat(textPrice).toFixed(2) : null;
+}
+
+function renderProductTabbyPromoFromDOM() {
   var containerId = "tabby-promo-product";
   if (document.getElementById(containerId)) return;
 
+  var price = getProductPriceFromDOM();
+  if (!price) return;
+
   var priceBlock =
-    document.querySelector(".ec-price-item") ||
-    document.querySelector(".details-product-price");
+    document.querySelector(".product-details__product-price") ||
+    document.querySelector(".ec-price-item");
 
   if (!priceBlock) return;
 
   var container = document.createElement("div");
   container.id = containerId;
-  priceBlock.parentNode.appendChild(container);
+  container.style.marginTop = "8px";
+
+  priceBlock.appendChild(container);
 
   new TabbyPromo({
     selector: "#" + containerId,
     currency: "AED",
-    price: product.price.toFixed(2),
+    price: price,
     lang: "en",
     source: "product",
     publicKey: "pk_test_019a48dc-9449-c3a6-1f94-ac7a81772c7a",
@@ -97,15 +116,15 @@ function renderProductTabbyPromoFromPage(product) {
   });
 }
 
-
 Ecwid.OnPageLoaded.add(function (page) {
   if (page.type !== "PRODUCT") return;
 
   loadTabbyPromoScript(function () {
-    if (!page.product) return;
-    renderProductTabbyPromoFromPage(page.product);
+    // Delay ensures DOM is fully hydrated
+    setTimeout(renderProductTabbyPromoFromDOM, 300);
   });
 });
+
 
 
 // --------------------- Cart ----------------------//
@@ -207,7 +226,6 @@ if (Ecwid.OnCheckoutChanged && Ecwid.OnCheckoutChanged.add) {
     Ecwid.Cart.get(renderCheckoutTabbyCard);
   });
 }
-
 
 
 
