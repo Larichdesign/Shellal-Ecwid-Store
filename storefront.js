@@ -58,3 +58,148 @@ Ecwid.OnAPILoaded.add(function () {
     Ecwid.OnCheckoutChanged.add(toggleTabbyByCountry);
   }
 });
+
+function loadTabbyPromoScript(callback) {
+  if (window.TabbyPromo) return callback();
+
+  var s = document.createElement("script");
+  s.src = "https://checkout.tabby.ai/tabby-promo.js";
+  s.onload = callback;
+  document.head.appendChild(s);
+}
+
+function renderProductTabbyPromo(product) {
+  if (!product || !product.price) return;
+
+  var containerId = "tabby-promo-product";
+  if (document.getElementById(containerId)) return;
+
+  var container = document.createElement("div");
+  container.id = containerId;
+
+  var priceBlock =
+    document.querySelector(".ec-price") ||
+    document.querySelector(".details-product-price");
+
+  if (!priceBlock) return;
+  priceBlock.parentNode.appendChild(container);
+
+  new TabbyPromo({
+    selector: "#" + containerId,
+    currency: "AED",
+    price: product.price.toFixed(2),
+    lang: "en",
+    source: "product",
+    publicKey: "YOUR_PUBLIC_KEY",
+    merchantCode: "YOUR_MERCHANT_CODE"
+  });
+}
+
+Ecwid.OnPageLoaded.add(function (page) {
+  if (page.type !== "PRODUCT") return;
+
+  loadTabbyPromoScript(function () {
+    Ecwid.getProduct(page.productId, function (product) {
+      renderProductTabbyPromo(product);
+    });
+  });
+});
+
+
+function renderCartTabbyPromo(cart) {
+  if (!cart || !cart.total) return;
+
+  var id = "tabby-promo-cart";
+  if (document.getElementById(id)) return;
+
+  var container = document.createElement("div");
+  container.id = id;
+
+  var totalRow =
+    document.querySelector(".ec-cart-summary") ||
+    document.querySelector(".ec-cart__footer");
+
+  if (!totalRow) return;
+  totalRow.appendChild(container);
+
+  new TabbyPromo({
+    selector: "#" + id,
+    currency: cart.currency || "AED",
+    price: cart.total.toFixed(2),
+    lang: "en",
+    source: "cart",
+    publicKey: "YOUR_PUBLIC_KEY",
+    merchantCode: "YOUR_MERCHANT_CODE"
+  });
+}
+
+
+Ecwid.OnPageLoaded.add(function (page) {
+  if (page.type !== "CART") return;
+
+  loadTabbyPromoScript(function () {
+    Ecwid.Cart.get(renderCartTabbyPromo);
+  });
+});
+
+function loadTabbyCardScript(callback) {
+  if (window.TabbyCard) return callback();
+
+  var s = document.createElement("script");
+  s.src = "https://checkout.tabby.ai/tabby-card.js";
+  s.onload = callback;
+  document.head.appendChild(s);
+}
+
+
+function renderCheckoutTabbyCard(cart) {
+  var containerId = "tabby-card-checkout";
+
+  var tabbyMethod = document.querySelector(
+    ".ec-radiogroup__item--app_id-custom-app-123237799-1"
+  );
+
+  if (!tabbyMethod) return;
+
+  var existing = document.getElementById(containerId);
+  if (existing) existing.remove();
+
+  var container = document.createElement("div");
+  container.id = containerId;
+  container.style.marginTop = "12px";
+
+  tabbyMethod.appendChild(container);
+
+  new TabbyCard({
+    selector: "#" + containerId,
+    currency: cart.currency || "AED",
+    price: cart.total.toFixed(2),
+    lang: "en",
+    publicKey: "YOUR_PUBLIC_KEY",
+    merchantCode: "YOUR_MERCHANT_CODE"
+  });
+}
+
+
+Ecwid.OnPageLoaded.add(function (page) {
+  if (
+    typeof page !== "object" ||
+    page.type !== "CHECKOUT_PAYMENT_DETAILS"
+  )
+    return;
+
+  loadTabbyCardScript(function () {
+    Ecwid.Cart.get(function (cart) {
+      if (cart.shippingPerson?.countryCode !== "AE") return;
+      renderCheckoutTabbyCard(cart);
+    });
+  });
+});
+
+if (Ecwid.OnCheckoutChanged && Ecwid.OnCheckoutChanged.add) {
+  Ecwid.OnCheckoutChanged.add(function () {
+    Ecwid.Cart.get(renderCheckoutTabbyCard);
+  });
+}
+
+
