@@ -77,7 +77,7 @@ function renderProductTabbyPromoFromPage(product) {
   if (document.getElementById(containerId)) return;
 
   var priceBlock =
-    document.querySelector(".ec-price") ||
+    document.querySelector(".ec-price-item") ||
     document.querySelector(".details-product-price");
 
   if (!priceBlock) return;
@@ -207,6 +207,7 @@ if (Ecwid.OnCheckoutChanged && Ecwid.OnCheckoutChanged.add) {
     Ecwid.Cart.get(renderCheckoutTabbyCard);
   });
 }
+
 
 
 
