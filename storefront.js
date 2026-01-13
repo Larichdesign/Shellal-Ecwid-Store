@@ -227,40 +227,52 @@ if (Ecwid.OnCheckoutChanged && Ecwid.OnCheckoutChanged.add) {
   });
 }
 
-Ecwid.OnAPILoaded.add(function () {
 
-  Ecwid.OnPageLoaded.add(function (page) {
+// ---------- Hide Out-of-Stock Product Options (FINAL SAFE VERSION) ---------- //
+
+(function () {
+
+  function hideOutOfStockOptions(page) {
     if (!page || page.type !== "PRODUCT" || !page.product) return;
 
     var product = page.product;
 
-    if (!product.options || !product.options.length) {
-      console.warn("[ECWID] No product options found");
-      return;
-    }
+    if (!Array.isArray(product.options)) return;
 
     product.options.forEach(function (option) {
-      if (option.type !== "SELECT" || !option.choices) return;
+      if (option.type !== "SELECT" || !Array.isArray(option.choices)) return;
 
       option.choices.forEach(function (choice) {
         if (choice.inStock === false || choice.quantity === 0) {
 
-          // Ecwid uses custom dropdowns — not native <option>
-          var domOption = Array.from(
-            document.querySelectorAll(".form-control__option")
-          ).find(el => el.textContent.trim() === choice.text);
+          var options = document.querySelectorAll(".form-control__option");
+          if (!options.length) return;
 
-          if (!domOption) {
-            console.warn("[ECWID] Option DOM not found:", choice.text);
-            return;
-          }
-
-          domOption.classList.add("ec-option-hidden");
+          options.forEach(function (el) {
+            if (el.textContent.trim() === choice.text) {
+              el.classList.add("ec-option-hidden");
+            }
+          });
         }
       });
     });
+  }
+
+  // Wait until Ecwid API exists
+  if (!window.Ecwid || !Ecwid.OnAPILoaded || !Ecwid.OnAPILoaded.add) return;
+
+  Ecwid.OnAPILoaded.add(function () {
+
+    // Guarded page listener
+    if (Ecwid.OnPageLoaded && Ecwid.OnPageLoaded.add) {
+      Ecwid.OnPageLoaded.add(function (page) {
+        // Delay ensures custom dropdown DOM is ready
+        setTimeout(function () {
+          hideOutOfStockOptions(page);
+        }, 300);
+      });
+    }
+
   });
 
-});
-
-
+})();
