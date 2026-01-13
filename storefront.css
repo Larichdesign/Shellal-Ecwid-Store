@@ -2,7 +2,3 @@
   display: none;
 }
 
-
-.ec-store .form-control__select option:disabled {
-  display: none;
-}
