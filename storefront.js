@@ -227,71 +227,40 @@ if (Ecwid.OnCheckoutChanged && Ecwid.OnCheckoutChanged.add) {
   });
 }
 
-console.log("[ECWID DEBUG] Script loaded");
-
 Ecwid.OnAPILoaded.add(function () {
-  console.log("[ECWID DEBUG] Ecwid API loaded");
 
-  Ecwid.OnProductLoaded.add(function (product) {
-    console.log("[ECWID DEBUG] Product loaded:", product);
+  Ecwid.OnPageLoaded.add(function (page) {
+    if (!page || page.type !== "PRODUCT" || !page.product) return;
 
-    if (!product) {
-      console.warn("[ECWID DEBUG] No product object");
-      return;
-    }
+    var product = page.product;
 
     if (!product.options || !product.options.length) {
-      console.warn("[ECWID DEBUG] No product options found");
+      console.warn("[ECWID] No product options found");
       return;
     }
 
-    product.options.forEach(function (option, optionIndex) {
-      console.log(`[ECWID DEBUG] Option ${optionIndex}:`, option);
+    product.options.forEach(function (option) {
+      if (option.type !== "SELECT" || !option.choices) return;
 
-      if (option.type !== "SELECT") {
-        console.log("[ECWID DEBUG] Skipping non-select option:", option.type);
-        return;
-      }
-
-      if (!option.choices || !option.choices.length) {
-        console.warn("[ECWID DEBUG] No choices for option:", option.name);
-        return;
-      }
-
-      option.choices.forEach(function (choice, choiceIndex) {
-        console.log(
-          `[ECWID DEBUG] Choice ${choiceIndex}:`,
-          choice.text,
-          "inStock:",
-          choice.inStock,
-          "qty:",
-          choice.quantity
-        );
-
+      option.choices.forEach(function (choice) {
         if (choice.inStock === false || choice.quantity === 0) {
-          console.log(
-            "[ECWID DEBUG] Hiding out-of-stock option:",
-            choice.text
-          );
 
-          // Try multiple selectors (Ecwid DOM varies)
-          var domOption =
-            document.querySelector(`option[value="${choice.text}"]`) ||
-            document.querySelector(`option[label="${choice.text}"]`);
+          // Ecwid uses custom dropdowns — not native <option>
+          var domOption = Array.from(
+            document.querySelectorAll(".form-control__option")
+          ).find(el => el.textContent.trim() === choice.text);
 
           if (!domOption) {
-            console.warn(
-              "[ECWID DEBUG] DOM option NOT FOUND for:",
-              choice.text
-            );
+            console.warn("[ECWID] Option DOM not found:", choice.text);
             return;
           }
 
           domOption.classList.add("ec-option-hidden");
-          console.log("[ECWID DEBUG] DOM option hidden:", choice.text);
         }
       });
     });
   });
+
 });
+
 
