@@ -2,3 +2,6 @@
   display: none;
 }
 
+.ec-option-hidden {
+  display: none !important;
+}
