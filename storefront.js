@@ -226,36 +226,3 @@ if (Ecwid.OnCheckoutChanged && Ecwid.OnCheckoutChanged.add) {
     Ecwid.Cart.get(renderCheckoutTabbyCard);
   });
 }
-
-// ---------- Hide Out-of-Stock Product Options (DOM-based, SAFE) ---------- //
-(function () {
-
-  function hideDisabledOptions() {
-    var selects = document.querySelectorAll(
-      ".product-details-module select.form-control__select"
-    );
-
-    if (!selects.length) return;
-
-    selects.forEach(function (select) {
-      var options = select.querySelectorAll("option:disabled");
-      options.forEach(function (opt) {
-        opt.style.display = "none";
-      });
-    });
-  }
-
-  // Run once on load
-  document.addEventListener("DOMContentLoaded", hideDisabledOptions);
-
-  // Re-run when Ecwid dynamically updates the page
-  var observer = new MutationObserver(function () {
-    hideDisabledOptions();
-  });
-
-  observer.observe(document.body, {
-    childList: true,
-    subtree: true
-  });
-
-})();
