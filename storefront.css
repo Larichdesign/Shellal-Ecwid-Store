@@ -2,7 +2,7 @@
   display: none;
 }
 
-/* Hide out-of-stock product option values (Ecwid) */
+
 .ec-store .form-control__select option:disabled {
   display: none;
 }
