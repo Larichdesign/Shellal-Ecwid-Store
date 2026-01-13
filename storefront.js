@@ -227,6 +227,31 @@ if (Ecwid.OnCheckoutChanged && Ecwid.OnCheckoutChanged.add) {
   });
 }
 
+Ecwid.OnAPILoaded.add(function () {
+  Ecwid.OnProductLoaded.add(function (product) {
+    if (!product || !product.options) return;
+
+    product.options.forEach(function (option) {
+      // Only dropdown/select options
+      if (option.type !== "SELECT" || !option.choices) return;
+
+      option.choices.forEach(function (choice) {
+        // Out of stock OR no quantity defined
+        if (choice.inStock === false || choice.quantity === 0) {
+          // Match option by visible text
+          var selector = "option[value='" + choice.text + "']";
+          var domOption = document.querySelector(selector);
+
+          if (domOption) {
+            domOption.classList.add("ec-option-hidden");
+          }
+        }
+      });
+    });
+  });
+});
+
+
 
 
 
