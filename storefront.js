@@ -227,53 +227,35 @@ if (Ecwid.OnCheckoutChanged && Ecwid.OnCheckoutChanged.add) {
   });
 }
 
-
-// ---------- Hide Out-of-Stock Product Options (FINAL SAFE VERSION) ---------- //
-
+// ---------- Hide Out-of-Stock Product Options (DOM-based, SAFE) ---------- //
 (function () {
 
-  function hideOutOfStockOptions(page) {
-    if (!page || page.type !== "PRODUCT" || !page.product) return;
+  function hideDisabledOptions() {
+    var selects = document.querySelectorAll(
+      ".product-details-module select.form-control__select"
+    );
 
-    var product = page.product;
+    if (!selects.length) return;
 
-    if (!Array.isArray(product.options)) return;
-
-    product.options.forEach(function (option) {
-      if (option.type !== "SELECT" || !Array.isArray(option.choices)) return;
-
-      option.choices.forEach(function (choice) {
-        if (choice.inStock === false || choice.quantity === 0) {
-
-          var options = document.querySelectorAll(".form-control__option");
-          if (!options.length) return;
-
-          options.forEach(function (el) {
-            if (el.textContent.trim() === choice.text) {
-              el.classList.add("ec-option-hidden");
-            }
-          });
-        }
+    selects.forEach(function (select) {
+      var options = select.querySelectorAll("option:disabled");
+      options.forEach(function (opt) {
+        opt.style.display = "none";
       });
     });
   }
 
-  // Wait until Ecwid API exists
-  if (!window.Ecwid || !Ecwid.OnAPILoaded || !Ecwid.OnAPILoaded.add) return;
+  // Run once on load
+  document.addEventListener("DOMContentLoaded", hideDisabledOptions);
 
-  Ecwid.OnAPILoaded.add(function () {
+  // Re-run when Ecwid dynamically updates the page
+  var observer = new MutationObserver(function () {
+    hideDisabledOptions();
+  });
 
-    // Guarded page listener
-    if (Ecwid.OnPageLoaded && Ecwid.OnPageLoaded.add) {
-      Ecwid.OnPageLoaded.add(function (page) {
-        // Delay ensures custom dropdown DOM is ready
-        setTimeout(function () {
-          hideOutOfStockOptions(page);
-        }, 300);
-      });
-    }
-
+  observer.observe(document.body, {
+    childList: true,
+    subtree: true
   });
 
 })();
-
