@@ -111,7 +111,7 @@ function renderProductTabbyPromoFromDOM() {
     price: price,
     lang: "en",
     source: "product",
-    publicKey: "pk_test_019a48dc-9449-c3a6-1f94-ac7a81772c7a",
+    publicKey: "pk_019a48dc-9449-c3a6-1f94-ac79d83b5dea",
     merchantCode: "SHN"
   });
 }
@@ -151,7 +151,7 @@ function renderCartTabbyPromo(cart) {
     price: cart.total.toFixed(2),
     lang: "en",
     source: "cart",
-    publicKey: "pk_test_019a48dc-9449-c3a6-1f94-ac7a81772c7a",
+    publicKey: "pk_019a48dc-9449-c3a6-1f94-ac79d83b5dea",
     merchantCode: "SHN"
   });
 }
@@ -200,7 +200,7 @@ function renderCheckoutTabbyCard(cart) {
     currency: cart.currency || "AED",
     price: cart.total.toFixed(2),
     lang: "en",
-    publicKey: "pk_test_019a48dc-9449-c3a6-1f94-ac7a81772c7a",
+    publicKey: "pk_019a48dc-9449-c3a6-1f94-ac79d83b5dea",
     merchantCode: "SHN"
   });
 }
@@ -226,4 +226,5 @@ if (Ecwid.OnCheckoutChanged && Ecwid.OnCheckoutChanged.add) {
     Ecwid.Cart.get(renderCheckoutTabbyCard);
   });
 }
+
 
