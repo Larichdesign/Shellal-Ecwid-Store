@@ -316,12 +316,30 @@ function waitForOrderActions() {
   injectStyles();
   injectModal();
 
-  Ecwid.getOrder(function (order) {
-    log("Order loaded", order.id, order.fulfillmentStatus);
-    injectButton(order);
-  });
+  // Extract order ID from DOM
+  var orderTitle = document.querySelector(
+    ".ec-confirmation__title, .ec-cart-order__title"
+  );
+
+  if (!orderTitle) {
+    log("Order title not found, retrying...");
+    setTimeout(waitForOrderActions, 300);
+    return;
+  }
+
+  var match = orderTitle.textContent.match(/#(\d+)/);
+  if (!match) {
+    log("Order number not found in title");
+    return;
+  }
+
+  var orderId = match[1];
+  log("Order ID detected:", orderId);
+
+  injectButton({ id: orderId });
 }
 
 })();
+
 
 
