@@ -29,7 +29,7 @@ function getOrderNumberFromEl(orderEl) {
 }
 
 function cancelReturn(orderNumber) {
-  fetch("https://shellalalnoor.com/cancel-return-pickup", {
+  fetch("https://shellalalnoor.com/cancel-return", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
@@ -272,13 +272,13 @@ if (Ecwid.OnCheckoutChanged && Ecwid.OnCheckoutChanged.add) {
     s.id = "return-style";
     s.innerHTML = `
       /* Align return button exactly under Buy again */
-      .ec-confirmation__actions .custom-return-btn {
+      .ec-confirmation__actions .custom-return-wrap {
         display: block;
         margin-top: 8px;
       }
 
       @media (max-width: 768px) {
-        .ec-confirmation__actions .custom-return-btn {
+        .ec-confirmation__actions .custom-return-wrap {
           width: 100%;
         }
 
@@ -349,69 +349,67 @@ if (Ecwid.OnCheckoutChanged && Ecwid.OnCheckoutChanged.add) {
   }
 
   /* ---------- BUTTON PER ORDER ---------- */
-function injectButtons() {
-  document.querySelectorAll(".ec-cart__order").forEach(function (orderEl) {
-    if (orderEl.querySelector(".custom-return-btn")) return;
+  function injectButtons() {
+    document.querySelectorAll(".ec-cart__order").forEach(function (orderEl) {
+      if (orderEl.querySelector(".custom-return-btn")) return;
 
-    var actionsEl = orderEl.querySelector(".ec-confirmation__actions");
-    var buyAgainBtn = actionsEl?.querySelector(".ec-confirmation__action-link");
-    if (!actionsEl || !buyAgainBtn) return;
+      var titleEl = orderEl.querySelector(".ec-confirmation__title");
+      var actionsEl = orderEl.querySelector(".ec-confirmation__actions");
+      var buyAgainBtn = actionsEl?.querySelector(".ec-confirmation__action-link");
 
-    var orderNumber = getOrderNumberFromEl(orderEl);
-    if (!orderNumber) return;
+      if (!titleEl || !actionsEl || !buyAgainBtn) return;
 
-    var wrap = document.createElement("div");
-    wrap.className = "custom-return-wrap";
+      var orderNumber = getOrderNumberFromEl(orderEl);
+if (!orderNumber) return;
 
-    var btn = document.createElement("button");
-    btn.id = "custom-return-btn"; // ⬅ unchanged
-    btn.dataset.orderNumber = orderNumber;
-    btn.textContent = "Checking return…";
-    btn.disabled = true;
+      var wrap = document.createElement("div");
+      wrap.className = "custom-return-wrap";
 
-    wrap.appendChild(btn);
-    buyAgainBtn.insertAdjacentElement("afterend", wrap);
+var btn = document.createElement("button");
+btn.className = "custom-return-btn";
+btn.dataset.orderNumber = orderNumber;
+btn.textContent = "Checking return…";
+btn.disabled = true;
 
-    // ✅ FIXED fetch URL
-    fetch("https://shellalalnoor.com/return-status?orderNumber=" + orderNumber)
-      .then(r => r.json())
-      .then(data => {
-        btn.disabled = false;
+fetch("https://shellalalnoor.com/return-status?=" + )
+  .then(r => r.json())
+  .then(data => {
+    btn.disabled = false;
 
-        if (data.status === "RETURNED") {
-          btn.textContent = "Return Completed";
-          btn.disabled = true;
-          return;
-        }
+    if (data.status === "RETURNED") {
+      btn.textContent = "Return Completed";
+      btn.disabled = true;
+      return;
+    }
 
-        if (data.hasReturn) {
-          btn.textContent = "Cancel Return";
-          btn.onclick = function () {
-            cancelReturn(orderNumber);
-          };
-        } else {
-          btn.textContent = "Request Return";
-          btn.onclick = function () {
-            injectModal();
-            document.getElementById("return-order-id").value = orderNumber;
-            document.getElementById("return-title").value = "";
-            document.getElementById("return-reason").value = "";
-            document.getElementById("return-submit").disabled = true;
-            document
-              .getElementById("return-modal")
-              .classList.add("active");
-          };
-        }
-      })
-      .catch(() => {
-        btn.disabled = false;
-        btn.textContent = "Request Return";
-      });
-
-    log("Return button injected for order", orderNumber);
+    if (data.hasReturn) {
+      btn.textContent = "Cancel Return";
+      btn.onclick = function () {
+        cancelReturn(orderNumber);
+      };
+    } else {
+      btn.textContent = "Request Return";
+      btn.onclick = function () {
+        injectModal();
+        document.getElementById("return-order-id").value = orderNumber;
+        document.getElementById("return-title").value = "";
+        document.getElementById("return-reason").value = "";
+        document.getElementById("return-submit").disabled = true;
+        document.getElementById("return-modal").classList.add("active");
+      };
+    }
+  })
+  .catch(() => {
+    btn.disabled = false;
+    btn.textContent = "Request Return";
   });
-}
 
+      wrap.appendChild(btn);
+      buyAgainBtn.insertAdjacentElement("afterend", wrap);
+
+      log("Return button injected for order", orderNumber);
+    });
+  }
 
   /* ---------- EVENTS ---------- */
   document.addEventListener("click", function (e) {
@@ -458,8 +456,3 @@ if (e.target.id === "return-submit") {
     observer.observe(document.body, { childList: true, subtree: true });
   });
 })();
-
-
-
-
-
