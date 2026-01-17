@@ -133,10 +133,10 @@ safeOnApiLoaded(function () {
         <input type="hidden" id="return-order-id" />
 
         <label class="return-label">Return title</label>
-        <input id="return-title" type="text" />
+        <input id="return-title" type="text" placeholder="e.g. Wrong size, damaged item"/>
 
         <label class="return-label">Reason for return</label>
-        <textarea id="return-reason"></textarea>
+        <textarea id="return-reason" placeholder="Please explain the reason for return"></textarea>
 
         <div class="return-actions">
           <button id="return-submit" disabled>Submit</button>
@@ -241,3 +241,4 @@ safeOnApiLoaded(function () {
     injectButton(match[1]);
   });
 })();
+
