@@ -197,7 +197,17 @@ safeOnPageLoaded(function (page) {
   }
 
 function injectModal() {
-  if (document.getElementById("return-modal")) return;
+  var existing = document.getElementById("return-modal");
+  if (existing) {
+    if (!document.getElementById("return-order-id")) {
+      var hidden = document.createElement("input");
+      hidden.type = "hidden";
+      hidden.id = "return-order-id";
+      existing.querySelector(".return-box")?.prepend(hidden);
+      log("Hidden order input injected into existing modal");
+    }
+    return;
+  }
 
   var m = document.createElement("div");
   m.id = "return-modal";
@@ -205,7 +215,6 @@ function injectModal() {
     <div class="return-overlay"></div>
     <div class="return-box">
 
-      <!-- ✅ ADD THIS BACK -->
       <input type="hidden" id="return-order-id" />
 
       <label for="return-title" class="return-label">Return title</label>
@@ -228,7 +237,9 @@ function injectModal() {
     </div>
   `;
   document.body.appendChild(m);
+  log("Modal injected");
 }
+
 
 
  function injectButton(order) {
@@ -372,6 +383,7 @@ function waitForOrderActions() {
 }
 
 })();
+
 
 
 
