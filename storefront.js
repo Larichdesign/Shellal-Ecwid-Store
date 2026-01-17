@@ -232,9 +232,8 @@ if (Ecwid.OnCheckoutChanged && Ecwid.OnCheckoutChanged.add) {
 }
 
 /* =========================================================
-   RETURN FEATURE – FINAL (ALIGNED + STYLED)
+   RETURN FEATURE – FINAL (ALIGNED + STYLED + SAFE)
    ========================================================= */
-
 (function () {
   var DEBUG = true;
 
@@ -244,24 +243,20 @@ if (Ecwid.OnCheckoutChanged && Ecwid.OnCheckoutChanged.add) {
     }
   }
 
-  /* ---------- STYLES (STRUCTURE ONLY) ---------- */
+  /* ---------- STYLES ---------- */
   function injectStyles() {
     if (document.getElementById("return-style")) return;
 
     var s = document.createElement("style");
     s.id = "return-style";
     s.innerHTML = `
-      /* Align return button exactly under Buy again */
       .ec-confirmation__actions .custom-return-wrap {
         display: block;
         margin-top: 8px;
       }
 
       @media (max-width: 768px) {
-        .ec-confirmation__actions .custom-return-wrap {
-          width: 100%;
-        }
-
+        .ec-confirmation__actions .custom-return-wrap,
         #custom-return-btn {
           width: 100%;
         }
@@ -287,6 +282,18 @@ if (Ecwid.OnCheckoutChanged && Ecwid.OnCheckoutChanged.add) {
         width: 90%;
         max-width: 420px;
         z-index: 9999;
+        border-radius: 6px;
+      }
+
+      .return-box h3 {
+        margin-top: 0;
+      }
+
+      .return-actions {
+        margin-top: 12px;
+        display: flex;
+        gap: 10px;
+        justify-content: flex-end;
       }
     `;
     document.head.appendChild(s);
@@ -301,13 +308,13 @@ if (Ecwid.OnCheckoutChanged && Ecwid.OnCheckoutChanged.add) {
     m.innerHTML = `
       <div class="return-overlay"></div>
       <div class="return-box">
-
         <input type="hidden" id="return-order-id" />
+        <input type="hidden" id="return-order-number" />
 
-        <label class="return-label">Return title</label>
+        <label>Return title</label>
         <input id="return-title" />
 
-        <label class="return-label">Reason for return</label>
+        <label>Reason for return</label>
         <textarea id="return-reason"></textarea>
 
         <div class="return-actions">
@@ -328,7 +335,23 @@ if (Ecwid.OnCheckoutChanged && Ecwid.OnCheckoutChanged.add) {
     };
   }
 
-  /* ---------- BUTTON PER ORDER ---------- */
+  /* ---------- SUCCESS UI ---------- */
+  function showSuccess() {
+    var box = document.querySelector(".return-box");
+    box.innerHTML = `
+      <h3>Return submitted</h3>
+      <p>Your return request has been submitted successfully.</p>
+      <button id="return-success-close">Close</button>
+    `;
+
+    document
+      .getElementById("return-success-close")
+      .addEventListener("click", function () {
+        document.getElementById("return-modal").classList.remove("active");
+      });
+  }
+
+  /* ---------- BUTTONS PER ORDER ---------- */
   function injectButtons() {
     document.querySelectorAll(".ec-cart__order").forEach(function (orderEl) {
       if (orderEl.querySelector("#custom-return-btn")) return;
@@ -336,6 +359,7 @@ if (Ecwid.OnCheckoutChanged && Ecwid.OnCheckoutChanged.add) {
       var titleEl = orderEl.querySelector(".ec-confirmation__title");
       var actionsEl = orderEl.querySelector(".ec-confirmation__actions");
       var buyAgainBtn = actionsEl?.querySelector(".ec-confirmation__action-link");
+      var commentsEl = orderEl.querySelector(".ec-confirmation__comments");
 
       if (!titleEl || !actionsEl || !buyAgainBtn) return;
 
@@ -343,22 +367,47 @@ if (Ecwid.OnCheckoutChanged && Ecwid.OnCheckoutChanged.add) {
       if (!match) return;
 
       var orderNumber = match[1];
+      var orderId = orderEl.getAttribute("data-order-id");
+
+      var hasReturn =
+        commentsEl &&
+        commentsEl.textContent.includes("RETURN REQUESTED");
 
       var wrap = document.createElement("div");
       wrap.className = "custom-return-wrap";
 
       var btn = document.createElement("button");
       btn.id = "custom-return-btn";
-      btn.textContent = "Request Return";
 
-      btn.onclick = function () {
-        injectModal();
-        document.getElementById("return-order-id").value = orderNumber;
-        document.getElementById("return-title").value = "";
-        document.getElementById("return-reason").value = "";
-        document.getElementById("return-submit").disabled = true;
-        document.getElementById("return-modal").classList.add("active");
-      };
+      btn.dataset.orderId = orderId;
+      btn.dataset.orderNumber = orderNumber;
+
+      if (hasReturn) {
+        btn.textContent = "Cancel Return";
+        btn.onclick = function () {
+          fetch("https://shellalalnoor.com/cancel-return", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              orderId: Number(orderId),
+              orderNumber: orderNumber
+            })
+          }).then(function () {
+            location.reload();
+          });
+        };
+      } else {
+        btn.textContent = "Request Return";
+        btn.onclick = function () {
+          injectModal();
+          document.getElementById("return-order-id").value = orderId;
+          document.getElementById("return-order-number").value = orderNumber;
+          document.getElementById("return-title").value = "";
+          document.getElementById("return-reason").value = "";
+          document.getElementById("return-submit").disabled = true;
+          document.getElementById("return-modal").classList.add("active");
+        };
+      }
 
       wrap.appendChild(btn);
       buyAgainBtn.insertAdjacentElement("afterend", wrap);
@@ -375,33 +424,37 @@ if (Ecwid.OnCheckoutChanged && Ecwid.OnCheckoutChanged.add) {
     ) {
       document.getElementById("return-modal")?.classList.remove("active");
     }
-if (e.target.id === "return-submit") {
-  var orderNumber = document.getElementById("return-order-id").value;
-  var title = document.getElementById("return-title").value.trim();
-  var reason = document.getElementById("return-reason").value.trim();
 
-  e.target.disabled = true;
-  e.target.textContent = "Submitting...";
+    if (e.target.id === "return-submit") {
+      var orderId = document.getElementById("return-order-id").value;
+      var orderNumber = document.getElementById("return-order-number").value;
+      var title = document.getElementById("return-title").value.trim();
+      var reason = document.getElementById("return-reason").value.trim();
 
-  fetch("https://shellalalnoor.com/request-return", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-       orderId: order.id, 
-      orderNumber: order.publicUid,
-      returnRequest: {
-        title: title,
-        reason: reason,
-        requestedAt: new Date().toISOString()
-      }
-    })
-  }).then(function () {
-    location.reload();
+      e.target.disabled = true;
+      e.target.textContent = "Submitting...";
+
+      fetch("https://shellalalnoor.com/request-return", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          orderId: Number(orderId),
+          orderNumber: orderNumber,
+          returnRequest: {
+            title: title,
+            reason: reason,
+            requestedAt: new Date().toISOString()
+          }
+        })
+      })
+        .then(showSuccess)
+        .catch(function () {
+          alert("Failed to submit return. Please try again.");
+        });
+    }
   });
-}
-  });
 
-  /* ---------- PAGE + OBSERVER ---------- */
+  /* ---------- PAGE INIT ---------- */
   safeOnPageLoaded(function (page) {
     if (page.type !== "ACCOUNT_ROOT" && page.type !== "ORDER_DETAILS") return;
 
