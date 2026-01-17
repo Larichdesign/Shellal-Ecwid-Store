@@ -389,23 +389,31 @@ if (Ecwid.OnCheckoutChanged && Ecwid.OnCheckoutChanged.add) {
   }
 
   /* ---------------- ECWID HOOK ---------------- */
-if (window.Ecwid && Ecwid.OnPageLoaded && Ecwid.OnPageLoaded.add) {
-  Ecwid.OnPageLoaded.add(function (page) {
-    if (page.type !== "ORDER_DETAILS") return;
+if (window.Ecwid && Ecwid.OnAPILoaded && Ecwid.OnAPILoaded.add) {
+  Ecwid.OnAPILoaded.add(function () {
 
-    injectStyles();
-    injectModal();
-    bindModalEvents();
+    if (!Ecwid.OnPageLoaded || !Ecwid.OnPageLoaded.add) return;
 
-    Ecwid.getOrder(function (order) {
-      injectReturnButton(order);
-      updateButtonState(order);
-      displayReturnReason(order);
+    Ecwid.OnPageLoaded.add(function (page) {
+      if (page.type !== "ORDER_DETAILS") return;
+
+      injectStyles();
+      injectModal();
+      bindModalEvents();
+
+      Ecwid.getOrder(function (order) {
+        injectReturnButton(order);
+        updateButtonState(order);
+        displayReturnReason(order);
+      });
     });
+
   });
 }
 
+
 })();
+
 
 
 
