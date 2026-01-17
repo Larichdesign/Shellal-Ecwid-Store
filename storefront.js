@@ -1,6 +1,17 @@
 var client_id = "custom-app-123237799-1";
 var image_link = "https://iili.io/fAXNFcu.png";
 
+function safeOnPageLoaded(handler) {
+  if (window.Ecwid && Ecwid.OnAPILoaded && Ecwid.OnAPILoaded.add) {
+    Ecwid.OnAPILoaded.add(function () {
+      if (Ecwid.OnPageLoaded && Ecwid.OnPageLoaded.add) {
+        Ecwid.OnPageLoaded.add(handler);
+      }
+    });
+  }
+}
+
+
 function addTabbyIcon() {
   var target = document.querySelector(
     "label.ec-radiogroup__item--app_id-" +
@@ -116,7 +127,7 @@ function renderProductTabbyPromoFromDOM() {
   });
 }
 
-Ecwid.OnPageLoaded.add(function (page) {
+safeOnPageLoaded(function (page) {
   if (page.type !== "PRODUCT") return;
 
   loadTabbyPromoScript(function () {
@@ -157,7 +168,7 @@ function renderCartTabbyPromo(cart) {
 }
 
 
-Ecwid.OnPageLoaded.add(function (page) {
+safeOnPageLoaded(function (page) {
   if (page.type !== "CART") return;
 
   loadTabbyPromoScript(function () {
@@ -206,7 +217,7 @@ function renderCheckoutTabbyCard(cart) {
 }
 
 
-Ecwid.OnPageLoaded.add(function (page) {
+safeOnPageLoaded(function (page) {
   if (
     typeof page !== "object" ||
     page.type !== "CHECKOUT_PAYMENT_DETAILS"
@@ -435,6 +446,7 @@ if (window.Ecwid && Ecwid.OnAPILoaded && Ecwid.OnAPILoaded.add) {
 
 
 })();
+
 
 
 
