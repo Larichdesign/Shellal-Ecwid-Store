@@ -232,7 +232,7 @@ if (Ecwid.OnCheckoutChanged && Ecwid.OnCheckoutChanged.add) {
 }
 
 /* =========================================================
-   RETURN FEATURE – FINAL (WORKING + STYLED + SAFE)
+   RETURN FEATURE – FINAL (STABLE + ECWID-SAFE)
    ========================================================= */
 (function () {
   var DEBUG = true;
@@ -240,47 +240,116 @@ if (Ecwid.OnCheckoutChanged && Ecwid.OnCheckoutChanged.add) {
     if (DEBUG) console.log("[RETURN]", ...arguments);
   }
 
-  /* ---------- STYLES (KEEP YOUR CSS) ---------- */
+  /* =========================================================
+     SAFE ECWID HOOK
+  ========================================================= */
+  function safeOnPageLoaded(handler) {
+    if (window.Ecwid && Ecwid.OnPageLoaded) {
+      Ecwid.OnPageLoaded.add(handler);
+    } else {
+      setTimeout(function () {
+        safeOnPageLoaded(handler);
+      }, 50);
+    }
+  }
+
+  /* =========================================================
+     STYLES
+  ========================================================= */
   function injectStyles() {
     if (document.getElementById("return-style")) return;
 
     var s = document.createElement("style");
     s.id = "return-style";
     s.innerHTML = `
-      .ec-confirmation__actions .custom-return-wrap {
-        display: block;
+      #custom-return-btn {
+        background: #000;
+        font-family: "DM Sans", system-ui, sans-serif;
+        font-weight: 500;
+        color: #fff;
+        padding: 8px 24px;
+        min-height: 40px;
+        font-size: 14px;
+        border-radius: 4px;
+        cursor: pointer;
+      }
+
+      #custom-return-btn:hover { background: #222; }
+
+      .custom-return-wrap {
         margin-top: 8px;
       }
 
-      @media (max-width: 768px) {
-        #custom-return-btn { width: 100%; }
-      }
-
-      #return-modal { display:none }
-      #return-modal.active { display:block }
+      #return-modal { display: none; }
+      #return-modal.active { display: block; }
 
       .return-overlay {
-        position:fixed; inset:0;
-        background:rgba(0,0,0,.5);
-        z-index:9998;
+        position: fixed;
+        inset: 0;
+        background: rgba(0,0,0,.5);
+        z-index: 9998;
       }
 
       .return-box {
-        position:fixed;
-        top:50%; left:50%;
-        transform:translate(-50%,-50%);
-        background:#fff;
-        padding:20px;
-        width:90%;
-        max-width:420px;
-        z-index:9999;
-        border-radius:8px;
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        background: #fff;
+        padding: 20px;
+        width: 90%;
+        max-width: 420px;
+        z-index: 9999;
+        border-radius: 8px;
+      }
+
+      .return-label {
+        display: block;
+        margin-bottom: 6px;
+        font-weight: 500;
+      }
+
+      #return-title,
+      #return-reason {
+        width: 100%;
+        padding: 8px 12px;
+        margin-bottom: 14px;
+        border: 1px solid #ccc;
+        border-radius: 4px;
+        font-family: "DM Sans", system-ui, sans-serif;
+      }
+
+      .return-actions {
+        display: flex;
+        justify-content: flex-end;
+        gap: 10px;
+      }
+
+      #return-submit {
+        background: #000;
+        color: #fff;
+        padding: 8px 16px;
+        border-radius: 4px;
+        font-weight: 500;
+      }
+
+      #return-submit:disabled {
+        background: #ccc;
+        cursor: not-allowed;
+      }
+
+      #return-cancel {
+        background: transparent;
+        border: 1px solid #ccc;
+        padding: 8px 16px;
       }
     `;
     document.head.appendChild(s);
   }
 
-  /* ---------- MODAL ---------- */
+  /* =========================================================
+     MODAL
+  ========================================================= */
   function injectModal() {
     if (document.getElementById("return-modal")) return;
 
@@ -289,11 +358,10 @@ if (Ecwid.OnCheckoutChanged && Ecwid.OnCheckoutChanged.add) {
     m.innerHTML = `
       <div class="return-overlay"></div>
       <div class="return-box">
-        <input type="hidden" id="return-order-id">
-        <input type="hidden" id="return-order-number">
+        <input type="hidden" id="return-order-number" />
 
         <label class="return-label">Return title</label>
-        <input id="return-title">
+        <input id="return-title" />
 
         <label class="return-label">Reason for return</label>
         <textarea id="return-reason"></textarea>
@@ -306,17 +374,18 @@ if (Ecwid.OnCheckoutChanged && Ecwid.OnCheckoutChanged.add) {
     `;
     document.body.appendChild(m);
 
-    function validate() {
-      document.getElementById("return-submit").disabled =
-        !document.getElementById("return-title").value.trim() ||
-        !document.getElementById("return-reason").value.trim();
-    }
+    var title = document.getElementById("return-title");
+    var reason = document.getElementById("return-reason");
+    var submit = document.getElementById("return-submit");
 
-    document.getElementById("return-title").oninput = validate;
-    document.getElementById("return-reason").oninput = validate;
+    title.oninput = reason.oninput = function () {
+      submit.disabled = !title.value.trim() || !reason.value.trim();
+    };
   }
 
-  /* ---------- SUCCESS ---------- */
+  /* =========================================================
+     SUCCESS STATE
+  ========================================================= */
   function showSuccess() {
     var box = document.querySelector(".return-box");
     box.innerHTML = `
@@ -324,12 +393,17 @@ if (Ecwid.OnCheckoutChanged && Ecwid.OnCheckoutChanged.add) {
       <p>Your return request has been submitted successfully.</p>
       <button id="return-success-close">Close</button>
     `;
-    document.getElementById("return-success-close").onclick = function () {
-      document.getElementById("return-modal").classList.remove("active");
-    };
+
+    document
+      .getElementById("return-success-close")
+      .onclick = function () {
+        document.getElementById("return-modal").classList.remove("active");
+      };
   }
 
-  /* ---------- BUTTON INJECTION ---------- */
+  /* =========================================================
+     BUTTON INJECTION
+  ========================================================= */
   function injectButtons() {
     document.querySelectorAll(".ec-cart__order").forEach(function (orderEl) {
       if (orderEl.querySelector("#custom-return-btn")) return;
@@ -338,24 +412,22 @@ if (Ecwid.OnCheckoutChanged && Ecwid.OnCheckoutChanged.add) {
       var actionsEl = orderEl.querySelector(".ec-confirmation__actions");
       var buyAgainBtn = actionsEl?.querySelector(".ec-confirmation__action-link");
 
-      if (!titleEl || !actionsEl || !buyAgainBtn) return;
+      if (!titleEl || !buyAgainBtn) return;
 
       var match = titleEl.textContent.match(/#(\d+)/);
       if (!match) return;
 
       var orderNumber = match[1];
-      var orderId = orderEl.getAttribute("data-order-id");
 
       var wrap = document.createElement("div");
       wrap.className = "custom-return-wrap";
 
       var btn = document.createElement("button");
-      btn.id = "custom-return-btn"; // 🔥 REQUIRED FOR YOUR CSS
+      btn.id = "custom-return-btn";
       btn.textContent = "Request Return";
 
       btn.onclick = function () {
         injectModal();
-        document.getElementById("return-order-id").value = orderId;
         document.getElementById("return-order-number").value = orderNumber;
         document.getElementById("return-title").value = "";
         document.getElementById("return-reason").value = "";
@@ -366,11 +438,13 @@ if (Ecwid.OnCheckoutChanged && Ecwid.OnCheckoutChanged.add) {
       wrap.appendChild(btn);
       buyAgainBtn.insertAdjacentElement("afterend", wrap);
 
-      log("Return button shown for order", orderNumber);
+      log("Injected return button for order", orderNumber);
     });
   }
 
-  /* ---------- EVENTS ---------- */
+  /* =========================================================
+     EVENTS
+  ========================================================= */
   document.addEventListener("click", function (e) {
     if (
       e.target.id === "return-cancel" ||
@@ -380,10 +454,8 @@ if (Ecwid.OnCheckoutChanged && Ecwid.OnCheckoutChanged.add) {
     }
 
     if (e.target.id === "return-submit") {
-      var orderId = Number(document.getElementById("return-order-id").value);
       var orderNumber =
         document.getElementById("return-order-number").value;
-
       var title = document.getElementById("return-title").value.trim();
       var reason = document.getElementById("return-reason").value.trim();
 
@@ -394,23 +466,24 @@ if (Ecwid.OnCheckoutChanged && Ecwid.OnCheckoutChanged.add) {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          orderId,
-          orderNumber,
+          orderNumber: orderNumber,
           returnRequest: {
-            title,
-            reason,
+            title: title,
+            reason: reason,
             requestedAt: new Date().toISOString()
           }
         })
       })
         .then(showSuccess)
-        .catch(() =>
-          alert("Failed to submit return. Please try again.")
-        );
+        .catch(function () {
+          alert("Failed to submit return. Please try again.");
+        });
     }
   });
 
-  /* ---------- INIT ---------- */
+  /* =========================================================
+     INIT
+  ========================================================= */
   safeOnPageLoaded(function (page) {
     if (page.type !== "ACCOUNT_ROOT" && page.type !== "ORDER_DETAILS") return;
 
