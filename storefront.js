@@ -168,6 +168,72 @@ safeOnPageLoaded(function (page) {
 });
 
 /* =========================================================
+   CHECKOUT – TABBY PROMO
+   ========================================================= */
+
+function loadTabbyCardScript(callback) {
+  if (window.TabbyCard) return callback();
+
+  var s = document.createElement("script");
+  s.src = "https://checkout.tabby.ai/tabby-card.js";
+  s.onload = callback;
+  document.head.appendChild(s);
+}
+
+
+function renderCheckoutTabbyCard(cart) {
+  var containerId = "tabby-card-checkout";
+
+  var tabbyMethod = document.querySelector(
+    ".ec-radiogroup__item--app_id-custom-app-123237799-1"
+  );
+
+  if (!tabbyMethod) return;
+
+  var existing = document.getElementById(containerId);
+  if (existing) existing.remove();
+
+  var container = document.createElement("div");
+  container.id = containerId;
+  container.style.marginTop = "12px";
+
+  tabbyMethod.appendChild(container);
+
+  new TabbyCard({
+    selector: "#" + containerId,
+    currency: cart.currency || "AED",
+    price: cart.total.toFixed(2),
+    lang: "en",
+    publicKey: "pk_019a48dc-9449-c3a6-1f94-ac79d83b5dea",
+    merchantCode: "SHN"
+  });
+}
+
+
+safeOnPageLoaded(function (page) {
+  if (
+    typeof page !== "object" ||
+    page.type !== "CHECKOUT_PAYMENT_DETAILS"
+  )
+    return;
+
+  loadTabbyCardScript(function () {
+    Ecwid.Cart.get(function (cart) {
+      if (cart.shippingPerson?.countryCode !== "AE") return;
+      renderCheckoutTabbyCard(cart);
+    });
+  });
+});
+
+if (Ecwid.OnCheckoutChanged && Ecwid.OnCheckoutChanged.add) {
+  Ecwid.OnCheckoutChanged.add(function () {
+    Ecwid.Cart.get(renderCheckoutTabbyCard);
+  });
+}
+
+
+
+/* =========================================================
    RETURN FEATURE (FINAL + STABLE)
    ========================================================= */
 
@@ -334,5 +400,6 @@ safeOnPageLoaded(function (page) {
     injectButton(match[1]);
   });
 })();
+
 
 
