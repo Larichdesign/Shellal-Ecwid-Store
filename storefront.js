@@ -361,18 +361,18 @@ function injectButtons() {
     if (!orderNumber) return;
 
     var wrap = document.createElement("div");
-    wrap.className = "custom-return-btn";
+    wrap.className = "custom-return-wrap";
 
     var btn = document.createElement("button");
-    btn.className = "custom-return-btn";
+    btn.className = "custom-return-btn"; // ⬅ unchanged
     btn.dataset.orderNumber = orderNumber;
-    btn.textContent = "Request Return";
+    btn.textContent = "Checking return…";
     btn.disabled = true;
 
     wrap.appendChild(btn);
     buyAgainBtn.insertAdjacentElement("afterend", wrap);
 
-    // 🔄 NOW check return status
+    // ✅ FIXED fetch URL
     fetch("https://shellalalnoor.com/return-status?orderNumber=" + orderNumber)
       .then(r => r.json())
       .then(data => {
@@ -397,7 +397,9 @@ function injectButtons() {
             document.getElementById("return-title").value = "";
             document.getElementById("return-reason").value = "";
             document.getElementById("return-submit").disabled = true;
-            document.getElementById("return-modal").classList.add("active");
+            document
+              .getElementById("return-modal")
+              .classList.add("active");
           };
         }
       })
@@ -409,6 +411,7 @@ function injectButtons() {
     log("Return button injected for order", orderNumber);
   });
 }
+
 
   /* ---------- EVENTS ---------- */
   document.addEventListener("click", function (e) {
@@ -455,6 +458,7 @@ if (e.target.id === "return-submit") {
     observer.observe(document.body, { childList: true, subtree: true });
   });
 })();
+
 
 
 
