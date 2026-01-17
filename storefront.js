@@ -227,4 +227,183 @@ if (Ecwid.OnCheckoutChanged && Ecwid.OnCheckoutChanged.add) {
   });
 }
 
+/* =========================================================
+   ECWID RETURN REQUEST FEATURE (ORDER NOTES BASED)
+   ========================================================= */
+
+(function () {
+  var RETURN_PREFIX = "[RETURN REQUEST]";
+
+  function getReturnReason(notes) {
+    if (!notes) return null;
+    var match = notes.match(/\[RETURN REQUEST\][\s\S]*?Reason:\s*(.*)/i);
+    return match ? match[1] : null;
+  }
+
+  function injectStyles() {
+    if (document.getElementById("return-styles")) return;
+
+    var style = document.createElement("style");
+    style.id = "return-styles";
+    style.innerHTML = `
+      #return-modal { display:none; }
+      #return-modal.active { display:block; }
+
+      .return-overlay {
+        position:fixed; inset:0;
+        background:rgba(0,0,0,.5);
+        z-index:9998;
+      }
+
+      .return-box {
+        position:fixed;
+        top:50%; left:50%;
+        transform:translate(-50%,-50%);
+        background:#fff;
+        width:90%; max-width:420px;
+        padding:20px;
+        border-radius:6px;
+        z-index:9999;
+      }
+
+      .return-box textarea {
+        width:100%;
+        min-height:90px;
+        margin-top:8px;
+      }
+
+      .return-actions {
+        display:flex;
+        gap:10px;
+        justify-content:flex-end;
+        margin-top:15px;
+      }
+    `;
+    document.head.appendChild(style);
+  }
+
+  function injectModal() {
+    if (document.getElementById("return-modal")) return;
+
+    var modal = document.createElement("div");
+    modal.id = "return-modal";
+    modal.innerHTML = `
+      <div class="return-overlay"></div>
+      <div class="return-box">
+        <h2 id="return-modal-title">Request a Return</h2>
+        <input type="hidden" id="return-order-id">
+        <label for="return-reason">Reason for return</label>
+        <textarea id="return-reason"></textarea>
+        <div class="return-actions">
+          <button id="return-submit">Submit</button>
+          <button id="return-cancel">Cancel</button>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(modal);
+  }
+
+  function showModal(orderId) {
+    document.getElementById("return-order-id").value = orderId;
+    document.getElementById("return-modal").classList.add("active");
+  }
+
+  function hideModal() {
+    document.getElementById("return-modal").classList.remove("active");
+  }
+
+  function injectReturnButton(order) {
+    var actions = document.querySelector(".ec-confirmation__actions");
+    if (!actions || document.getElementById("custom-return-btn")) return;
+
+    var btn = document.createElement("button");
+    btn.id = "custom-return-btn";
+    btn.className = "ec-btn ec-btn--secondary";
+    btn.textContent = "Request Return";
+
+    btn.onclick = function () {
+      showModal(order.id);
+    };
+
+    actions.appendChild(btn);
+    return btn;
+  }
+
+  function updateButtonState(order) {
+    var btn = document.getElementById("custom-return-btn");
+    if (!btn) return;
+
+    var reason = getReturnReason(order.notes);
+
+    if (order.fulfillmentStatus === "RETURNED") {
+      btn.disabled = true;
+      btn.textContent = "Returned";
+    } else if (reason) {
+      btn.disabled = true;
+      btn.textContent = "Return Requested";
+    }
+  }
+
+  function displayReturnReason(order) {
+    var reason = getReturnReason(order.notes);
+    if (!reason || document.getElementById("return-reason-display")) return;
+
+    var container = document.querySelector(".ec-confirmation__details");
+    if (!container) return;
+
+    var block = document.createElement("div");
+    block.id = "return-reason-display";
+    block.innerHTML = `<strong>Return reason</strong><div>${reason}</div>`;
+    container.appendChild(block);
+  }
+
+  function bindModalEvents() {
+    document.addEventListener("click", function (e) {
+      if (e.target.id === "return-cancel" ||
+          e.target.classList.contains("return-overlay")) {
+        hideModal();
+      }
+
+      if (e.target.id === "return-submit") {
+        var orderId = document.getElementById("return-order-id").value;
+        var reason = document.getElementById("return-reason").value.trim();
+
+        if (!reason) {
+          alert("Please provide a reason for return");
+          return;
+        }
+
+        fetch("/return-handler", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            orderId: orderId,
+            note: RETURN_PREFIX + "\nReason: " + reason
+          })
+        }).then(function () {
+          hideModal();
+          location.reload();
+        });
+      }
+    });
+  }
+
+  /* ---------------- ECWID HOOK ---------------- */
+
+  Ecwid.OnPageLoaded.add(function (page) {
+    if (page.type !== "ORDER_DETAILS") return;
+
+    injectStyles();
+    injectModal();
+    bindModalEvents();
+
+    Ecwid.getOrder(function (order) {
+      injectReturnButton(order);
+      updateButtonState(order);
+      displayReturnReason(order);
+    });
+  });
+
+})();
+
 
