@@ -375,45 +375,29 @@ if (Ecwid.OnCheckoutChanged && Ecwid.OnCheckoutChanged.add) {
     ) {
       document.getElementById("return-modal")?.classList.remove("active");
     }
+if (e.target.id === "return-submit") {
+  var orderNumber = document.getElementById("return-order-id").value;
+  var title = document.getElementById("return-title").value.trim();
+  var reason = document.getElementById("return-reason").value.trim();
 
-    if (e.target.id === "return-submit") {
-      var orderNumber = document.getElementById("return-order-id").value;
-      var title = document.getElementById("return-title").value.trim();
-      var reason = document.getElementById("return-reason").value.trim();
+  e.target.disabled = true;
+  e.target.textContent = "Submitting...";
 
-      e.target.disabled = true;
-      e.target.textContent = "Submitting...";
-
-      Ecwid.getOrder(orderNumber, function (order) {
-        fetch("https://shellalalnoor.com/request-return", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            orderId: order.id,
-            orderNumber: order.orderNumber,
-            total: order.total,
-            currency: order.currency,
-            customer: {
-              name: order.shippingPerson?.name,
-              email: order.email,
-              phone: order.shippingPerson?.phone,
-              address: order.shippingPerson?.street
-            },
-            items: order.items.map(i => ({
-              name: i.name,
-              sku: i.sku,
-              quantity: i.quantity,
-              price: i.price
-            })),
-            returnRequest: {
-              title,
-              reason,
-              requestedAt: new Date().toISOString()
-            }
-          })
-        }).then(() => location.reload());
-      });
-    }
+  fetch("https://shellalalnoor.com/request-return", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      orderNumber: orderNumber,
+      returnRequest: {
+        title: title,
+        reason: reason,
+        requestedAt: new Date().toISOString()
+      }
+    })
+  }).then(function () {
+    location.reload();
+  });
+}
   });
 
   /* ---------- PAGE + OBSERVER ---------- */
@@ -427,3 +411,4 @@ if (Ecwid.OnCheckoutChanged && Ecwid.OnCheckoutChanged.add) {
     observer.observe(document.body, { childList: true, subtree: true });
   });
 })();
+
