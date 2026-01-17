@@ -295,16 +295,33 @@ safeOnPageLoaded(function (page) {
   });
 
   safeOnPageLoaded(function (page) {
-    log("Page:", page.type);
-    if (page.type !== "ORDER_DETAILS") return;
+  log("Page:", page.type);
 
-    injectStyles();
-    injectModal();
+  if (page.type !== "ORDER_DETAILS" && page.type !== "ACCOUNT_ROOT") return;
 
-    Ecwid.getOrder(function (order) {
-      log("Order loaded", order.id, order.fulfillmentStatus);
-      injectButton(order);
-    });
+  waitForOrderActions();
+});
+
+function waitForOrderActions() {
+  var actions = document.querySelector(".ec-confirmation__actions");
+
+  if (!actions) {
+    log("Actions not ready, retrying...");
+    setTimeout(waitForOrderActions, 300);
+    return;
+  }
+
+  log("Actions container ready");
+
+  injectStyles();
+  injectModal();
+
+  Ecwid.getOrder(function (order) {
+    log("Order loaded", order.id, order.fulfillmentStatus);
+    injectButton(order);
   });
+}
+
 })();
+
 
