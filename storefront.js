@@ -272,13 +272,13 @@ if (Ecwid.OnCheckoutChanged && Ecwid.OnCheckoutChanged.add) {
     s.id = "return-style";
     s.innerHTML = `
       /* Align return button exactly under Buy again */
-      .ec-confirmation__actions .custom-return-wrap {
+      .ec-confirmation__actions .custom-return-btn {
         display: block;
         margin-top: 8px;
       }
 
       @media (max-width: 768px) {
-        .ec-confirmation__actions .custom-return-wrap {
+        .ec-confirmation__actions .custom-return-btn {
           width: 100%;
         }
 
@@ -351,7 +351,7 @@ if (Ecwid.OnCheckoutChanged && Ecwid.OnCheckoutChanged.add) {
   /* ---------- BUTTON PER ORDER ---------- */
 function injectButtons() {
   document.querySelectorAll(".ec-cart__order").forEach(function (orderEl) {
-    if (orderEl.querySelector(".custom-return-wrap")) return;
+    if (orderEl.querySelector(".custom-return-btn")) return;
 
     var actionsEl = orderEl.querySelector(".ec-confirmation__actions");
     var buyAgainBtn = actionsEl?.querySelector(".ec-confirmation__action-link");
@@ -361,7 +361,7 @@ function injectButtons() {
     if (!orderNumber) return;
 
     var wrap = document.createElement("div");
-    wrap.className = "custom-return-wrap";
+    wrap.className = "custom-return-btn";
 
     var btn = document.createElement("button");
     btn.className = "custom-return-btn";
@@ -455,5 +455,6 @@ if (e.target.id === "return-submit") {
     observer.observe(document.body, { childList: true, subtree: true });
   });
 })();
+
 
 
