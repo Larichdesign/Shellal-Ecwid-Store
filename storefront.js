@@ -204,6 +204,10 @@ function injectModal() {
   m.innerHTML = `
     <div class="return-overlay"></div>
     <div class="return-box">
+
+      <!-- ✅ ADD THIS BACK -->
+      <input type="hidden" id="return-order-id" />
+
       <label for="return-title" class="return-label">Return title</label>
       <input
         type="text"
@@ -225,6 +229,7 @@ function injectModal() {
   `;
   document.body.appendChild(m);
 }
+
 
  function injectButton(order) {
   var actions = document.querySelector(".ec-confirmation__actions");
@@ -360,6 +365,7 @@ function waitForOrderActions() {
 }
 
 })();
+
 
 
 
