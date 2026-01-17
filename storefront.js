@@ -232,32 +232,17 @@ if (Ecwid.OnCheckoutChanged && Ecwid.OnCheckoutChanged.add) {
 }
 
 
-
 /* =========================================================
-   RETURN FEATURE (FINAL + STABLE)
+   RETURN FEATURE (FIXED: ALL ORDERS + MOBILE + FULL DATA)
    ========================================================= */
 
 (function () {
   var RETURN_DEBUG = true;
 
   function log() {
-    if (!RETURN_DEBUG) return;
-    console.log.apply(console, ["[RETURN]"].concat([].slice.call(arguments)));
-  }
-
-  /* ---------- LIVE SUBMIT VALIDATION ---------- */
-
-  function updateSubmitState() {
-    var titleEl = document.getElementById("return-title");
-    var reasonEl = document.getElementById("return-reason");
-    var submitBtn = document.getElementById("return-submit");
-
-    if (!titleEl || !reasonEl || !submitBtn) return;
-
-    submitBtn.disabled = !(
-      titleEl.value.trim().length > 0 &&
-      reasonEl.value.trim().length > 0
-    );
+    if (RETURN_DEBUG) {
+      console.log.apply(console, ["[RETURN]"].concat([].slice.call(arguments)));
+    }
   }
 
   /* ---------- STYLES ---------- */
@@ -268,6 +253,20 @@ if (Ecwid.OnCheckoutChanged && Ecwid.OnCheckoutChanged.add) {
     var s = document.createElement("style");
     s.id = "return-style";
     s.innerHTML = `
+      .ecwid-return-btn {
+        display:block;
+        width:100%;
+        margin-top:8px;
+        padding:10px;
+        background:#000;
+        color:#fff;
+        border-radius:6px;
+        border:none;
+      }
+      .ecwid-return-btn[disabled] {
+        background:#ccc;
+        color:#666;
+      }
       #return-modal{display:none}
       #return-modal.active{display:block}
       .return-overlay{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9998}
@@ -288,15 +287,11 @@ if (Ecwid.OnCheckoutChanged && Ecwid.OnCheckoutChanged.add) {
     m.innerHTML = `
       <div class="return-overlay"></div>
       <div class="return-box">
-
         <input type="hidden" id="return-order-id" />
-
-        <label class="return-label">Return title</label>
-        <input id="return-title" type="text" placeholder="e.g. Wrong size, damaged item"/>
-
-        <label class="return-label">Reason for return</label>
-        <textarea id="return-reason" placeholder="Please explain the reason for return"></textarea>
-
+        <label>Return title</label>
+        <input id="return-title" />
+        <label>Reason</label>
+        <textarea id="return-reason"></textarea>
         <div class="return-actions">
           <button id="return-submit" disabled>Submit</button>
           <button id="return-cancel">Cancel</button>
@@ -305,101 +300,93 @@ if (Ecwid.OnCheckoutChanged && Ecwid.OnCheckoutChanged.add) {
     `;
     document.body.appendChild(m);
 
-    // Bind live validation ONCE
-    document.getElementById("return-title").addEventListener("input", updateSubmitState);
-    document.getElementById("return-reason").addEventListener("input", updateSubmitState);
-
-    log("Modal injected");
-  }
-
-  /* ---------- BUTTON INJECTION ---------- */
-
-  function injectButton(orderId) {
-    var actions = document.querySelector(".ec-confirmation__actions");
-    if (!actions || document.getElementById("custom-return-btn")) return;
-
-    var buyAgain = actions.querySelector(".ec-confirmation__action-link--desktop");
-    if (!buyAgain) return;
-
-    var wrap = document.createElement("div");
-    wrap.className =
-      "ec-confirmation__action-link ec-confirmation__action-link--desktop";
-
-    var btn = document.createElement("button");
-    btn.id = "custom-return-btn";
-    btn.className =
-      "form-control form-control--button form-control--medium";
-    btn.textContent = "Request Return";
-
-    btn.onclick = function () {
-      injectModal();
-
-      document.getElementById("return-order-id").value = orderId;
-      document.getElementById("return-title").value = "";
-      document.getElementById("return-reason").value = "";
-      document.getElementById("return-submit").disabled = true;
-
-      document.getElementById("return-modal").classList.add("active");
-      log("Return modal opened for order", orderId);
+    document.getElementById("return-title").oninput =
+    document.getElementById("return-reason").oninput = function () {
+      document.getElementById("return-submit").disabled =
+        !returnTitle.value.trim() || !returnReason.value.trim();
     };
-
-    wrap.appendChild(btn);
-    buyAgain.insertAdjacentElement("afterend", wrap);
   }
 
-  /* ---------- EVENTS ---------- */
+  /* ---------- BUTTON PER ORDER ---------- */
+
+  function injectButtons() {
+    document.querySelectorAll('[data-order-id]').forEach(function (orderEl) {
+      var orderId = orderEl.getAttribute("data-order-id");
+
+      if (orderEl.querySelector(".ecwid-return-btn")) return;
+
+      var actions = orderEl.querySelector(".ec-order-actions");
+      if (!actions) return;
+
+      var btn = document.createElement("button");
+      btn.className = "ecwid-return-btn";
+      btn.textContent = "Request Return";
+
+      btn.onclick = function () {
+        injectModal();
+        document.getElementById("return-order-id").value = orderId;
+        document.getElementById("return-title").value = "";
+        document.getElementById("return-reason").value = "";
+        document.getElementById("return-submit").disabled = true;
+        document.getElementById("return-modal").classList.add("active");
+      };
+
+      actions.appendChild(btn);
+      log("Injected return button for order", orderId);
+    });
+  }
+
+  /* ---------- SUBMIT ---------- */
 
   document.addEventListener("click", function (e) {
-    if (
-      e.target.id === "return-cancel" ||
-      e.target.classList.contains("return-overlay")
-    ) {
+    if (e.target.id === "return-cancel" || e.target.classList.contains("return-overlay")) {
       document.getElementById("return-modal")?.classList.remove("active");
-      document.getElementById("return-submit").disabled = true;
-      log("Modal closed");
     }
 
     if (e.target.id === "return-submit") {
-      var id = document.getElementById("return-order-id").value;
+      var orderId = document.getElementById("return-order-id").value;
       var title = document.getElementById("return-title").value.trim();
       var reason = document.getElementById("return-reason").value.trim();
-
-      if (!title || !reason) return;
 
       e.target.disabled = true;
       e.target.textContent = "Submitting...";
 
-      fetch("/return-handler", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          orderId: id,
-          note:
-            "[RETURN REQUEST]\n" +
-            "Title: " + title + "\n" +
-            "Reason: " + reason
-        })
-      }).then(function () {
-        location.reload();
+      Ecwid.getOrder(orderId, function (order) {
+        fetch("https://shellalalnoor.com/request-return", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            orderId: order.id,
+            orderNumber: order.orderNumber,
+            total: order.total,
+            currency: order.currency,
+            customer: {
+              name: order.shippingPerson?.name,
+              email: order.email,
+              phone: order.shippingPerson?.phone,
+              address: order.shippingPerson?.street
+            },
+            items: order.items.map(i => ({
+              name: i.name,
+              sku: i.sku,
+              qty: i.quantity,
+              price: i.price
+            })),
+            returnRequest: {
+              title,
+              reason,
+              requestedAt: new Date().toISOString()
+            }
+          })
+        }).then(() => location.reload());
       });
     }
   });
 
-  /* ---------- PAGE HOOK ---------- */
+  /* ---------- OBSERVE DOM (CRITICAL) ---------- */
 
-  safeOnPageLoaded(function (page) {
-    if (page.type !== "ORDER_DETAILS" && page.type !== "ACCOUNT_ROOT") return;
+  var observer = new MutationObserver(injectButtons);
+  observer.observe(document.body, { childList: true, subtree: true });
 
-    var title = document.querySelector(".ec-confirmation__title");
-    if (!title) return;
-
-    var match = title.textContent.match(/#(\d+)/);
-    if (!match) return;
-
-    injectStyles();
-    injectButton(match[1]);
-  });
+  injectStyles();
 })();
-
-
-
