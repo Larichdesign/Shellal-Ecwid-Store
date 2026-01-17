@@ -309,32 +309,41 @@ if (Ecwid.OnCheckoutChanged && Ecwid.OnCheckoutChanged.add) {
 
   /* ---------- BUTTON PER ORDER ---------- */
 
-  function injectButtons() {
-    document.querySelectorAll('[data-order-id]').forEach(function (orderEl) {
-      var orderId = orderEl.getAttribute("data-order-id");
+ function injectButtons() {
+  document.querySelectorAll(".ec-cart__order").forEach(function (orderEl) {
+    // prevent duplicates
+    if (orderEl.querySelector(".ecwid-return-btn")) return;
 
-      if (orderEl.querySelector(".ecwid-return-btn")) return;
+    const titleEl = orderEl.querySelector(".ec-confirmation__title");
+    const actionsEl = orderEl.querySelector(".ec-confirmation__actions");
 
-      var actions = orderEl.querySelector(".ec-order-actions");
-      if (!actions) return;
+    if (!titleEl || !actionsEl) return;
 
-      var btn = document.createElement("button");
-      btn.className = "ecwid-return-btn";
-      btn.textContent = "Request Return";
+    // Extract order number: "Online order #2"
+    const match = titleEl.textContent.match(/#(\d+)/);
+    if (!match) return;
 
-      btn.onclick = function () {
-        injectModal();
-        document.getElementById("return-order-id").value = orderId;
-        document.getElementById("return-title").value = "";
-        document.getElementById("return-reason").value = "";
-        document.getElementById("return-submit").disabled = true;
-        document.getElementById("return-modal").classList.add("active");
-      };
+    const orderNumber = match[1];
 
-      actions.appendChild(btn);
-      log("Injected return button for order", orderId);
-    });
-  }
+    const btn = document.createElement("button");
+    btn.className = "ecwid-return-btn";
+    btn.textContent = "Request Return";
+
+    btn.onclick = function () {
+      injectModal();
+      document.getElementById("return-order-id").value = orderNumber;
+      document.getElementById("return-title").value = "";
+      document.getElementById("return-reason").value = "";
+      document.getElementById("return-submit").disabled = true;
+      document.getElementById("return-modal").classList.add("active");
+    };
+
+    actionsEl.appendChild(btn);
+
+    log("Return button injected for order", orderNumber);
+  });
+}
+
 
   /* ---------- SUBMIT ---------- */
 
@@ -390,3 +399,4 @@ if (Ecwid.OnCheckoutChanged && Ecwid.OnCheckoutChanged.add) {
 
   injectStyles();
 })();
+
