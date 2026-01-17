@@ -238,9 +238,7 @@ if (Ecwid.OnCheckoutChanged && Ecwid.OnCheckoutChanged.add) {
   var DEBUG = true;
 
   function log() {
-    if (DEBUG) {
-      console.log.apply(console, ["[RETURN]"].concat([].slice.call(arguments)));
-    }
+    if (DEBUG) console.log("[RETURN]", ...arguments);
   }
 
   /* ---------- STYLES ---------- */
@@ -256,44 +254,37 @@ if (Ecwid.OnCheckoutChanged && Ecwid.OnCheckoutChanged.add) {
       }
 
       @media (max-width: 768px) {
-        .ec-confirmation__actions .custom-return-wrap,
-        #custom-return-btn {
+        .custom-return-wrap button {
           width: 100%;
         }
       }
 
-      #return-modal { display: none; }
-      #return-modal.active { display: block; }
+      #return-modal { display:none }
+      #return-modal.active { display:block }
 
       .return-overlay {
-        position: fixed;
-        inset: 0;
-        background: rgba(0,0,0,.5);
-        z-index: 9998;
+        position:fixed; inset:0;
+        background:rgba(0,0,0,.5);
+        z-index:9998;
       }
 
       .return-box {
-        position: fixed;
-        top: 50%;
-        left: 50%;
-        transform: translate(-50%, -50%);
-        background: #fff;
-        padding: 20px;
-        width: 90%;
-        max-width: 420px;
-        z-index: 9999;
-        border-radius: 6px;
-      }
-
-      .return-box h3 {
-        margin-top: 0;
+        position:fixed;
+        top:50%; left:50%;
+        transform:translate(-50%,-50%);
+        background:#fff;
+        padding:20px;
+        width:90%;
+        max-width:420px;
+        z-index:9999;
+        border-radius:6px;
       }
 
       .return-actions {
-        margin-top: 12px;
-        display: flex;
-        gap: 10px;
-        justify-content: flex-end;
+        display:flex;
+        gap:10px;
+        justify-content:flex-end;
+        margin-top:12px;
       }
     `;
     document.head.appendChild(s);
@@ -308,11 +299,11 @@ if (Ecwid.OnCheckoutChanged && Ecwid.OnCheckoutChanged.add) {
     m.innerHTML = `
       <div class="return-overlay"></div>
       <div class="return-box">
-        <input type="hidden" id="return-order-id" />
-        <input type="hidden" id="return-order-number" />
+        <input type="hidden" id="return-order-id">
+        <input type="hidden" id="return-order-number">
 
         <label>Return title</label>
-        <input id="return-title" />
+        <input id="return-title">
 
         <label>Reason for return</label>
         <textarea id="return-reason"></textarea>
@@ -325,24 +316,23 @@ if (Ecwid.OnCheckoutChanged && Ecwid.OnCheckoutChanged.add) {
     `;
     document.body.appendChild(m);
 
-    var titleEl = document.getElementById("return-title");
-    var reasonEl = document.getElementById("return-reason");
-    var submitBtn = document.getElementById("return-submit");
+    var submit = document.getElementById("return-submit");
+    function validate() {
+      submit.disabled =
+        !document.getElementById("return-title").value.trim() ||
+        !document.getElementById("return-reason").value.trim();
+    }
 
-    titleEl.oninput = reasonEl.oninput = function () {
-      submitBtn.disabled =
-        !titleEl.value.trim() || !reasonEl.value.trim();
-    };
+    document.getElementById("return-title").oninput = validate;
+    document.getElementById("return-reason").oninput = validate;
   }
 
   /* ---------- SUCCESS UI ---------- */
   function showSuccess() {
     var box = document.querySelector(".return-box");
-    if (!box) return;
-
     box.innerHTML = `
-      <h3>✅ Return request submitted</h3>
-      <p>Your return request has been received successfully.</p>
+      <h3>Return submitted</h3>
+      <p>Your return request has been submitted successfully.</p>
       <button id="return-success-close">Close</button>
     `;
 
@@ -353,7 +343,7 @@ if (Ecwid.OnCheckoutChanged && Ecwid.OnCheckoutChanged.add) {
       };
   }
 
-  /* ---------- BUTTONS PER ORDER ---------- */
+  /* ---------- BUTTON INJECTION ---------- */
   function injectButtons() {
     document.querySelectorAll(".ec-cart__order").forEach(function (orderEl) {
       if (orderEl.querySelector(".custom-return-wrap")) return;
@@ -369,52 +359,51 @@ if (Ecwid.OnCheckoutChanged && Ecwid.OnCheckoutChanged.add) {
       if (!match) return;
 
       var orderNumber = match[1];
-      var orderId = orderEl.getAttribute("data-order-id");
-      if (!orderId) return;
-
       var hasReturn =
-        commentsEl &&
-        commentsEl.textContent.includes("RETURN REQUESTED");
+        commentsEl && commentsEl.textContent.includes("RETURN REQUESTED");
 
       var wrap = document.createElement("div");
       wrap.className = "custom-return-wrap";
 
       var btn = document.createElement("button");
-      btn.id = "custom-return-btn";
-      btn.dataset.orderId = orderId;
-      btn.dataset.orderNumber = orderNumber;
+      btn.textContent = hasReturn ? "Cancel Return" : "Request Return";
 
-      if (hasReturn) {
-        btn.textContent = "Cancel Return";
-        btn.onclick = function () {
-          fetch("https://shellalalnoor.com/cancel-return", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              orderId: Number(orderId),
-              orderNumber: orderNumber
-            })
-          }).then(function () {
-            location.reload();
-          });
-        };
-      } else {
-        btn.textContent = "Request Return";
-        btn.onclick = function () {
+      btn.onclick = function () {
+        Ecwid.Cart.getOrders({ orderNumber: orderNumber }, function (res) {
+          var order = res?.orders?.[0];
+          if (!order) return alert("Order not found");
+
+          if (hasReturn) {
+            fetch("/cancel-return", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                orderId: order.id,
+                orderNumber: order.publicUid
+              })
+            }).then(() => location.reload());
+            return;
+          }
+
           injectModal();
-          document.getElementById("return-order-id").value = orderId;
-          document.getElementById("return-order-number").value = orderNumber;
+          document.getElementById("return-order-id").value = order.id;
+          document.getElementById("return-order-number").value =
+            order.publicUid;
+
           document.getElementById("return-title").value = "";
           document.getElementById("return-reason").value = "";
           document.getElementById("return-submit").disabled = true;
-          document.getElementById("return-modal").classList.add("active");
-        };
-      }
+
+          document
+            .getElementById("return-modal")
+            .classList.add("active");
+        });
+      };
 
       wrap.appendChild(btn);
       buyAgainBtn.insertAdjacentElement("afterend", wrap);
 
-      log("Return button injected for order", orderNumber);
+      log("Injected return button for order", orderNumber);
     });
   }
 
@@ -428,54 +417,44 @@ if (Ecwid.OnCheckoutChanged && Ecwid.OnCheckoutChanged.add) {
     }
 
     if (e.target.id === "return-submit") {
-      var orderId = document.getElementById("return-order-id").value;
-      var orderNumber = document.getElementById("return-order-number").value;
+      var orderId = Number(
+        document.getElementById("return-order-id").value
+      );
+      var orderNumber =
+        document.getElementById("return-order-number").value;
+
       var title = document.getElementById("return-title").value.trim();
       var reason = document.getElementById("return-reason").value.trim();
-
-      if (!orderId || !orderNumber || !title || !reason) {
-        alert("Missing return details.");
-        return;
-      }
 
       e.target.disabled = true;
       e.target.textContent = "Submitting...";
 
-      fetch("https://shellalalnoor.com/request-return", {
+      fetch("/request-return", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          orderId: Number(orderId),
-          orderNumber: orderNumber,
+          orderId,
+          orderNumber,
           returnRequest: {
-            title: title,
-            reason: reason,
+            title,
+            reason,
             requestedAt: new Date().toISOString()
           }
         })
       })
-        .then(function (res) {
-          if (!res.ok) throw new Error();
-          return res.json();
-        })
         .then(showSuccess)
-        .catch(function () {
-          alert("Failed to submit return. Please try again.");
-          e.target.disabled = false;
-          e.target.textContent = "Submit";
-        });
+        .catch(() => alert("Failed to submit return"));
     }
   });
 
-  /* ---------- PAGE INIT ---------- */
+  /* ---------- INIT ---------- */
   safeOnPageLoaded(function (page) {
     if (page.type !== "ACCOUNT_ROOT" && page.type !== "ORDER_DETAILS") return;
 
     injectStyles();
     injectButtons();
 
-    var observer = new MutationObserver(injectButtons);
-    observer.observe(document.body, {
+    new MutationObserver(injectButtons).observe(document.body, {
       childList: true,
       subtree: true
     });
