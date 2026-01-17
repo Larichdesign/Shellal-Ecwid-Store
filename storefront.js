@@ -232,16 +232,15 @@ if (Ecwid.OnCheckoutChanged && Ecwid.OnCheckoutChanged.add) {
 }
 
 /* =========================================================
-   RETURN FEATURE – FINAL (ALIGNED + STYLED + SAFE)
+   RETURN FEATURE – FINAL (WORKING + STYLED + SAFE)
    ========================================================= */
 (function () {
   var DEBUG = true;
-
   function log() {
     if (DEBUG) console.log("[RETURN]", ...arguments);
   }
 
-  /* ---------- STYLES ---------- */
+  /* ---------- STYLES (KEEP YOUR CSS) ---------- */
   function injectStyles() {
     if (document.getElementById("return-style")) return;
 
@@ -254,9 +253,7 @@ if (Ecwid.OnCheckoutChanged && Ecwid.OnCheckoutChanged.add) {
       }
 
       @media (max-width: 768px) {
-        .custom-return-wrap button {
-          width: 100%;
-        }
+        #custom-return-btn { width: 100%; }
       }
 
       #return-modal { display:none }
@@ -277,14 +274,7 @@ if (Ecwid.OnCheckoutChanged && Ecwid.OnCheckoutChanged.add) {
         width:90%;
         max-width:420px;
         z-index:9999;
-        border-radius:6px;
-      }
-
-      .return-actions {
-        display:flex;
-        gap:10px;
-        justify-content:flex-end;
-        margin-top:12px;
+        border-radius:8px;
       }
     `;
     document.head.appendChild(s);
@@ -302,10 +292,10 @@ if (Ecwid.OnCheckoutChanged && Ecwid.OnCheckoutChanged.add) {
         <input type="hidden" id="return-order-id">
         <input type="hidden" id="return-order-number">
 
-        <label>Return title</label>
+        <label class="return-label">Return title</label>
         <input id="return-title">
 
-        <label>Reason for return</label>
+        <label class="return-label">Reason for return</label>
         <textarea id="return-reason"></textarea>
 
         <div class="return-actions">
@@ -316,9 +306,8 @@ if (Ecwid.OnCheckoutChanged && Ecwid.OnCheckoutChanged.add) {
     `;
     document.body.appendChild(m);
 
-    var submit = document.getElementById("return-submit");
     function validate() {
-      submit.disabled =
+      document.getElementById("return-submit").disabled =
         !document.getElementById("return-title").value.trim() ||
         !document.getElementById("return-reason").value.trim();
     }
@@ -327,7 +316,7 @@ if (Ecwid.OnCheckoutChanged && Ecwid.OnCheckoutChanged.add) {
     document.getElementById("return-reason").oninput = validate;
   }
 
-  /* ---------- SUCCESS UI ---------- */
+  /* ---------- SUCCESS ---------- */
   function showSuccess() {
     var box = document.querySelector(".return-box");
     box.innerHTML = `
@@ -335,23 +324,19 @@ if (Ecwid.OnCheckoutChanged && Ecwid.OnCheckoutChanged.add) {
       <p>Your return request has been submitted successfully.</p>
       <button id="return-success-close">Close</button>
     `;
-
-    document
-      .getElementById("return-success-close")
-      .onclick = function () {
-        document.getElementById("return-modal").classList.remove("active");
-      };
+    document.getElementById("return-success-close").onclick = function () {
+      document.getElementById("return-modal").classList.remove("active");
+    };
   }
 
   /* ---------- BUTTON INJECTION ---------- */
   function injectButtons() {
     document.querySelectorAll(".ec-cart__order").forEach(function (orderEl) {
-      if (orderEl.querySelector(".custom-return-wrap")) return;
+      if (orderEl.querySelector("#custom-return-btn")) return;
 
       var titleEl = orderEl.querySelector(".ec-confirmation__title");
       var actionsEl = orderEl.querySelector(".ec-confirmation__actions");
       var buyAgainBtn = actionsEl?.querySelector(".ec-confirmation__action-link");
-      var commentsEl = orderEl.querySelector(".ec-confirmation__comments");
 
       if (!titleEl || !actionsEl || !buyAgainBtn) return;
 
@@ -359,51 +344,29 @@ if (Ecwid.OnCheckoutChanged && Ecwid.OnCheckoutChanged.add) {
       if (!match) return;
 
       var orderNumber = match[1];
-      var hasReturn =
-        commentsEl && commentsEl.textContent.includes("RETURN REQUESTED");
+      var orderId = orderEl.getAttribute("data-order-id");
 
       var wrap = document.createElement("div");
       wrap.className = "custom-return-wrap";
 
       var btn = document.createElement("button");
-      btn.textContent = hasReturn ? "Cancel Return" : "Request Return";
+      btn.id = "custom-return-btn"; // 🔥 REQUIRED FOR YOUR CSS
+      btn.textContent = "Request Return";
 
       btn.onclick = function () {
-        Ecwid.Cart.getOrders({ orderNumber: orderNumber }, function (res) {
-          var order = res?.orders?.[0];
-          if (!order) return alert("Order not found");
-
-          if (hasReturn) {
-            fetch("/cancel-return", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({
-                orderId: order.id,
-                orderNumber: order.publicUid
-              })
-            }).then(() => location.reload());
-            return;
-          }
-
-          injectModal();
-          document.getElementById("return-order-id").value = order.id;
-          document.getElementById("return-order-number").value =
-            order.publicUid;
-
-          document.getElementById("return-title").value = "";
-          document.getElementById("return-reason").value = "";
-          document.getElementById("return-submit").disabled = true;
-
-          document
-            .getElementById("return-modal")
-            .classList.add("active");
-        });
+        injectModal();
+        document.getElementById("return-order-id").value = orderId;
+        document.getElementById("return-order-number").value = orderNumber;
+        document.getElementById("return-title").value = "";
+        document.getElementById("return-reason").value = "";
+        document.getElementById("return-submit").disabled = true;
+        document.getElementById("return-modal").classList.add("active");
       };
 
       wrap.appendChild(btn);
       buyAgainBtn.insertAdjacentElement("afterend", wrap);
 
-      log("Injected return button for order", orderNumber);
+      log("Return button shown for order", orderNumber);
     });
   }
 
@@ -417,9 +380,7 @@ if (Ecwid.OnCheckoutChanged && Ecwid.OnCheckoutChanged.add) {
     }
 
     if (e.target.id === "return-submit") {
-      var orderId = Number(
-        document.getElementById("return-order-id").value
-      );
+      var orderId = Number(document.getElementById("return-order-id").value);
       var orderNumber =
         document.getElementById("return-order-number").value;
 
@@ -443,7 +404,9 @@ if (Ecwid.OnCheckoutChanged && Ecwid.OnCheckoutChanged.add) {
         })
       })
         .then(showSuccess)
-        .catch(() => alert("Failed to submit return"));
+        .catch(() =>
+          alert("Failed to submit return. Please try again.")
+        );
     }
   });
 
