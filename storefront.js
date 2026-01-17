@@ -387,6 +387,7 @@ if (e.target.id === "return-submit") {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
+       orderId: order.id, 
       orderNumber: orderNumber,
       returnRequest: {
         title: title,
@@ -411,3 +412,4 @@ if (e.target.id === "return-submit") {
     observer.observe(document.body, { childList: true, subtree: true });
   });
 })();
+
