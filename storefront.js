@@ -338,23 +338,25 @@ if (Ecwid.OnCheckoutChanged && Ecwid.OnCheckoutChanged.add) {
   /* ---------- SUCCESS UI ---------- */
   function showSuccess() {
     var box = document.querySelector(".return-box");
+    if (!box) return;
+
     box.innerHTML = `
-      <h3>Return submitted</h3>
-      <p>Your return request has been submitted successfully.</p>
+      <h3>✅ Return request submitted</h3>
+      <p>Your return request has been received successfully.</p>
       <button id="return-success-close">Close</button>
     `;
 
     document
       .getElementById("return-success-close")
-      .addEventListener("click", function () {
+      .onclick = function () {
         document.getElementById("return-modal").classList.remove("active");
-      });
+      };
   }
 
   /* ---------- BUTTONS PER ORDER ---------- */
   function injectButtons() {
     document.querySelectorAll(".ec-cart__order").forEach(function (orderEl) {
-      if (orderEl.querySelector("#custom-return-btn")) return;
+      if (orderEl.querySelector(".custom-return-wrap")) return;
 
       var titleEl = orderEl.querySelector(".ec-confirmation__title");
       var actionsEl = orderEl.querySelector(".ec-confirmation__actions");
@@ -368,6 +370,7 @@ if (Ecwid.OnCheckoutChanged && Ecwid.OnCheckoutChanged.add) {
 
       var orderNumber = match[1];
       var orderId = orderEl.getAttribute("data-order-id");
+      if (!orderId) return;
 
       var hasReturn =
         commentsEl &&
@@ -378,7 +381,6 @@ if (Ecwid.OnCheckoutChanged && Ecwid.OnCheckoutChanged.add) {
 
       var btn = document.createElement("button");
       btn.id = "custom-return-btn";
-
       btn.dataset.orderId = orderId;
       btn.dataset.orderNumber = orderNumber;
 
@@ -431,6 +433,11 @@ if (Ecwid.OnCheckoutChanged && Ecwid.OnCheckoutChanged.add) {
       var title = document.getElementById("return-title").value.trim();
       var reason = document.getElementById("return-reason").value.trim();
 
+      if (!orderId || !orderNumber || !title || !reason) {
+        alert("Missing return details.");
+        return;
+      }
+
       e.target.disabled = true;
       e.target.textContent = "Submitting...";
 
@@ -447,9 +454,15 @@ if (Ecwid.OnCheckoutChanged && Ecwid.OnCheckoutChanged.add) {
           }
         })
       })
+        .then(function (res) {
+          if (!res.ok) throw new Error();
+          return res.json();
+        })
         .then(showSuccess)
         .catch(function () {
           alert("Failed to submit return. Please try again.");
+          e.target.disabled = false;
+          e.target.textContent = "Submit";
         });
     }
   });
@@ -462,8 +475,9 @@ if (Ecwid.OnCheckoutChanged && Ecwid.OnCheckoutChanged.add) {
     injectButtons();
 
     var observer = new MutationObserver(injectButtons);
-    observer.observe(document.body, { childList: true, subtree: true });
+    observer.observe(document.body, {
+      childList: true,
+      subtree: true
+    });
   });
 })();
-
-
