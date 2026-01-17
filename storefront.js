@@ -389,7 +389,7 @@ if (Ecwid.OnCheckoutChanged && Ecwid.OnCheckoutChanged.add) {
   }
 
   /* ---------------- ECWID HOOK ---------------- */
-
+if (window.Ecwid && Ecwid.OnPageLoaded && Ecwid.OnPageLoaded.add) {
   Ecwid.OnPageLoaded.add(function (page) {
     if (page.type !== "ORDER_DETAILS") return;
 
@@ -403,7 +403,9 @@ if (Ecwid.OnCheckoutChanged && Ecwid.OnCheckoutChanged.add) {
       displayReturnReason(order);
     });
   });
+}
 
 })();
+
 
 
