@@ -364,7 +364,7 @@ function injectButtons() {
     wrap.className = "custom-return-wrap";
 
     var btn = document.createElement("button");
-    btn.className = "custom-return-btn"; // ⬅ unchanged
+    btn.id = "custom-return-btn"; // ⬅ unchanged
     btn.dataset.orderNumber = orderNumber;
     btn.textContent = "Checking return…";
     btn.disabled = true;
@@ -458,6 +458,7 @@ if (e.target.id === "return-submit") {
     observer.observe(document.body, { childList: true, subtree: true });
   });
 })();
+
 
 
 
