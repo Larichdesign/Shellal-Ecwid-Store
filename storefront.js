@@ -232,7 +232,7 @@ if (Ecwid.OnCheckoutChanged && Ecwid.OnCheckoutChanged.add) {
 }
 
 /* =========================================================
-   RETURN FEATURE – FINAL STABLE VERSION
+   RETURN FEATURE – FINAL (ALIGNED + STYLED)
    ========================================================= */
 
 (function () {
@@ -244,36 +244,25 @@ if (Ecwid.OnCheckoutChanged && Ecwid.OnCheckoutChanged.add) {
     }
   }
 
-  /* ---------- STYLES ---------- */
-
+  /* ---------- STYLES (STRUCTURE ONLY) ---------- */
   function injectStyles() {
     if (document.getElementById("return-style")) return;
 
     var s = document.createElement("style");
     s.id = "return-style";
     s.innerHTML = `
-      .ecwid-return-btn {
-        display: inline-flex !important;
-        align-items: center;
-        justify-content: center;
+      /* Align return button exactly under Buy again */
+      .ec-confirmation__actions .custom-return-wrap {
+        display: block;
         margin-top: 8px;
-        padding: 10px 14px;
-        background: #000;
-        color: #fff;
-        border-radius: 6px;
-        border: none;
-        cursor: pointer;
-        font-size: 14px;
-      }
-
-      .ecwid-return-btn[disabled] {
-        background: #ccc;
-        color: #666;
-        cursor: not-allowed;
       }
 
       @media (max-width: 768px) {
-        .ecwid-return-btn {
+        .ec-confirmation__actions .custom-return-wrap {
+          width: 100%;
+        }
+
+        #custom-return-btn {
           width: 100%;
         }
       }
@@ -297,35 +286,13 @@ if (Ecwid.OnCheckoutChanged && Ecwid.OnCheckoutChanged.add) {
         padding: 20px;
         width: 90%;
         max-width: 420px;
-        border-radius: 8px;
         z-index: 9999;
-      }
-
-      .return-box label {
-        display: block;
-        margin-top: 12px;
-        font-weight: 600;
-      }
-
-      .return-box input,
-      .return-box textarea {
-        width: 100%;
-        margin-top: 6px;
-        padding: 8px;
-      }
-
-      .return-actions {
-        display: flex;
-        gap: 10px;
-        justify-content: flex-end;
-        margin-top: 20px;
       }
     `;
     document.head.appendChild(s);
   }
 
   /* ---------- MODAL ---------- */
-
   function injectModal() {
     if (document.getElementById("return-modal")) return;
 
@@ -334,13 +301,14 @@ if (Ecwid.OnCheckoutChanged && Ecwid.OnCheckoutChanged.add) {
     m.innerHTML = `
       <div class="return-overlay"></div>
       <div class="return-box">
+
         <input type="hidden" id="return-order-id" />
 
-        <label>Return title</label>
-        <input id="return-title" placeholder="e.g. Wrong size" />
+        <label class="return-label">Return title</label>
+        <input id="return-title" />
 
-        <label>Reason for return</label>
-        <textarea id="return-reason" placeholder="Please explain the reason"></textarea>
+        <label class="return-label">Reason for return</label>
+        <textarea id="return-reason"></textarea>
 
         <div class="return-actions">
           <button id="return-submit" disabled>Submit</button>
@@ -361,44 +329,45 @@ if (Ecwid.OnCheckoutChanged && Ecwid.OnCheckoutChanged.add) {
   }
 
   /* ---------- BUTTON PER ORDER ---------- */
-
   function injectButtons() {
     document.querySelectorAll(".ec-cart__order").forEach(function (orderEl) {
-      if (orderEl.querySelector(".ecwid-return-btn")) return;
+      if (orderEl.querySelector("#custom-return-btn")) return;
 
       var titleEl = orderEl.querySelector(".ec-confirmation__title");
       var actionsEl = orderEl.querySelector(".ec-confirmation__actions");
+      var buyAgainBtn = actionsEl?.querySelector(".ec-confirmation__action-link");
 
-      if (!titleEl || !actionsEl) return;
+      if (!titleEl || !actionsEl || !buyAgainBtn) return;
 
       var match = titleEl.textContent.match(/#(\d+)/);
       if (!match) return;
 
       var orderNumber = match[1];
 
+      var wrap = document.createElement("div");
+      wrap.className = "custom-return-wrap";
+
       var btn = document.createElement("button");
-      btn.className = "ecwid-return-btn";
+      btn.id = "custom-return-btn";
       btn.textContent = "Request Return";
 
       btn.onclick = function () {
         injectModal();
-
         document.getElementById("return-order-id").value = orderNumber;
         document.getElementById("return-title").value = "";
         document.getElementById("return-reason").value = "";
         document.getElementById("return-submit").disabled = true;
-
         document.getElementById("return-modal").classList.add("active");
-        log("Modal opened for order", orderNumber);
       };
 
-      actionsEl.appendChild(btn);
-      log("Button injected for order", orderNumber);
+      wrap.appendChild(btn);
+      buyAgainBtn.insertAdjacentElement("afterend", wrap);
+
+      log("Return button injected for order", orderNumber);
     });
   }
 
-  /* ---------- SUBMIT HANDLER ---------- */
-
+  /* ---------- EVENTS ---------- */
   document.addEventListener("click", function (e) {
     if (
       e.target.id === "return-cancel" ||
@@ -424,39 +393,30 @@ if (Ecwid.OnCheckoutChanged && Ecwid.OnCheckoutChanged.add) {
             orderNumber: order.orderNumber,
             total: order.total,
             currency: order.currency,
-            paymentStatus: order.paymentStatus,
-            fulfillmentStatus: order.fulfillmentStatus,
             customer: {
               name: order.shippingPerson?.name,
               email: order.email,
               phone: order.shippingPerson?.phone,
-              address: order.shippingPerson?.street,
-              city: order.shippingPerson?.city,
-              country: order.shippingPerson?.country
+              address: order.shippingPerson?.street
             },
-            items: order.items.map(function (i) {
-              return {
-                name: i.name,
-                sku: i.sku,
-                quantity: i.quantity,
-                price: i.price
-              };
-            }),
+            items: order.items.map(i => ({
+              name: i.name,
+              sku: i.sku,
+              quantity: i.quantity,
+              price: i.price
+            })),
             returnRequest: {
-              title: title,
-              reason: reason,
+              title,
+              reason,
               requestedAt: new Date().toISOString()
             }
           })
-        }).then(function () {
-          location.reload();
-        });
+        }).then(() => location.reload());
       });
     }
   });
 
   /* ---------- PAGE + OBSERVER ---------- */
-
   safeOnPageLoaded(function (page) {
     if (page.type !== "ACCOUNT_ROOT" && page.type !== "ORDER_DETAILS") return;
 
@@ -464,9 +424,6 @@ if (Ecwid.OnCheckoutChanged && Ecwid.OnCheckoutChanged.add) {
     injectButtons();
 
     var observer = new MutationObserver(injectButtons);
-    observer.observe(document.body, {
-      childList: true,
-      subtree: true
-    });
+    observer.observe(document.body, { childList: true, subtree: true });
   });
 })();
