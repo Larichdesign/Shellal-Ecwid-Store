@@ -268,10 +268,17 @@ function injectModal() {
   btn.textContent = "Request Return";
 
   btn.onclick = function () {
-    log("Return button clicked", order.id);
-    document.getElementById("return-order-id").value = order.id;
-    document.getElementById("return-modal").classList.add("active");
-  };
+  log("Return button clicked", order.id);
+  injectModal();
+  var orderInput = document.getElementById("return-order-id");
+  if (!orderInput) {
+    console.error("[RETURN] return-order-id not found");
+    return;
+  }
+  orderInput.value = order.id;
+  document.getElementById("return-modal").classList.add("active");
+};
+
 
   wrapper.appendChild(btn);
 
@@ -365,6 +372,7 @@ function waitForOrderActions() {
 }
 
 })();
+
 
 
 
