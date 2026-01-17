@@ -313,21 +313,43 @@ if (Ecwid.OnCheckoutChanged && Ecwid.OnCheckoutChanged.add) {
   }
 
   function injectReturnButton(order) {
-    var actions = document.querySelector(".ec-confirmation__actions");
-    if (!actions || document.getElementById("custom-return-btn")) return;
+  var actions = document.querySelector(".ec-confirmation__actions");
+  if (!actions) return;
 
-    var btn = document.createElement("button");
-    btn.id = "custom-return-btn";
-    btn.className = "ec-btn ec-btn--secondary";
-    btn.textContent = "Request Return";
+  if (document.getElementById("custom-return-btn")) return;
 
-    btn.onclick = function () {
-      showModal(order.id);
-    };
+  var wrapper = document.createElement("div");
+  wrapper.className =
+    "ec-confirmation__action-link ec-confirmation__action-link--desktop";
 
-    actions.appendChild(btn);
-    return btn;
+  var btn = document.createElement("button");
+  btn.id = "custom-return-btn";
+  btn.type = "button";
+  btn.className =
+    "form-control form-control--button form-control--medium";
+  btn.textContent = "Request Return";
+
+  btn.onclick = function () {
+    showModal(order.id);
+  };
+
+  wrapper.appendChild(btn);
+
+  /**
+   * IMPORTANT:
+   * Insert BEFORE the "More actions" dropdown
+   */
+  var moreActions = actions.querySelector(
+    ".ec-confirmation__action-link .form-control--select"
+  );
+
+  if (moreActions) {
+    actions.insertBefore(wrapper, moreActions.parentElement);
+  } else {
+    actions.appendChild(wrapper);
   }
+}
+
 
   function updateButtonState(order) {
     var btn = document.getElementById("custom-return-btn");
@@ -413,6 +435,7 @@ if (window.Ecwid && Ecwid.OnAPILoaded && Ecwid.OnAPILoaded.add) {
 
 
 })();
+
 
 
 
