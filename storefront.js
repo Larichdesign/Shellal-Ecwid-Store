@@ -21,26 +21,6 @@ function safeOnPageLoaded(handler) {
   });
 }
 
-function getOrderNumberFromEl(orderEl) {
-  var titleEl = orderEl.querySelector(".ec-confirmation__title");
-  if (!titleEl) return null;
-  var match = titleEl.textContent.match(/#(\d+)/);
-  return match ? match[1] : null;
-}
-
-function cancelReturn(orderNumber) {
-  fetch("https://shellalalnoor.com/cancel-return", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-       orderNumber: orderNumber
-    })
-  }).then(function () {
-    location.reload();
-  });
-}
-
-
 /* =========================================================
    TABBY CONFIG (UNCHANGED LOGIC, SAFE HOOKS)
    ========================================================= */
@@ -282,7 +262,7 @@ if (Ecwid.OnCheckoutChanged && Ecwid.OnCheckoutChanged.add) {
           width: 100%;
         }
 
-        .custom-return-btn {
+        #custom-return-btn {
           width: 100%;
         }
       }
@@ -351,7 +331,7 @@ if (Ecwid.OnCheckoutChanged && Ecwid.OnCheckoutChanged.add) {
   /* ---------- BUTTON PER ORDER ---------- */
   function injectButtons() {
     document.querySelectorAll(".ec-cart__order").forEach(function (orderEl) {
-      if (orderEl.querySelector(".custom-return-btn")) return;
+      if (orderEl.querySelector("#custom-return-btn")) return;
 
       var titleEl = orderEl.querySelector(".ec-confirmation__title");
       var actionsEl = orderEl.querySelector(".ec-confirmation__actions");
@@ -359,36 +339,18 @@ if (Ecwid.OnCheckoutChanged && Ecwid.OnCheckoutChanged.add) {
 
       if (!titleEl || !actionsEl || !buyAgainBtn) return;
 
-      var orderNumber = getOrderNumberFromEl(orderEl);
-if (!orderNumber) return;
+      var match = titleEl.textContent.match(/#(\d+)/);
+      if (!match) return;
+
+      var orderNumber = match[1];
 
       var wrap = document.createElement("div");
       wrap.className = "custom-return-wrap";
 
-var btn = document.createElement("button");
-btn.className = "custom-return-btn";
-btn.dataset.orderNumber = orderNumber;
-btn.textContent = "Checking return…";
-btn.disabled = true;
-
-fetch("https://shellalalnoor.com/return-status?=" + )
-  .then(r => r.json())
-  .then(data => {
-    btn.disabled = false;
-
-    if (data.status === "RETURNED") {
-      btn.textContent = "Return Completed";
-      btn.disabled = true;
-      return;
-    }
-
-    if (data.hasReturn) {
-      btn.textContent = "Cancel Return";
-      btn.onclick = function () {
-        cancelReturn(orderNumber);
-      };
-    } else {
+      var btn = document.createElement("button");
+      btn.id = "custom-return-btn";
       btn.textContent = "Request Return";
+
       btn.onclick = function () {
         injectModal();
         document.getElementById("return-order-id").value = orderNumber;
@@ -397,12 +359,6 @@ fetch("https://shellalalnoor.com/return-status?=" + )
         document.getElementById("return-submit").disabled = true;
         document.getElementById("return-modal").classList.add("active");
       };
-    }
-  })
-  .catch(() => {
-    btn.disabled = false;
-    btn.textContent = "Request Return";
-  });
 
       wrap.appendChild(btn);
       buyAgainBtn.insertAdjacentElement("afterend", wrap);
@@ -431,7 +387,7 @@ if (e.target.id === "return-submit") {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
-       orderNumber: orderNumber,
+      orderNumber: orderNumber,
       returnRequest: {
         title: title,
         reason: reason,
@@ -443,7 +399,6 @@ if (e.target.id === "return-submit") {
   });
 }
   });
-   
 
   /* ---------- PAGE + OBSERVER ---------- */
   safeOnPageLoaded(function (page) {
