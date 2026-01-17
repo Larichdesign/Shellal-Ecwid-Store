@@ -349,67 +349,66 @@ if (Ecwid.OnCheckoutChanged && Ecwid.OnCheckoutChanged.add) {
   }
 
   /* ---------- BUTTON PER ORDER ---------- */
-  function injectButtons() {
-    document.querySelectorAll(".ec-cart__order").forEach(function (orderEl) {
-      if (orderEl.querySelector(".custom-return-btn")) return;
+function injectButtons() {
+  document.querySelectorAll(".ec-cart__order").forEach(function (orderEl) {
+    if (orderEl.querySelector(".custom-return-wrap")) return;
 
-      var titleEl = orderEl.querySelector(".ec-confirmation__title");
-      var actionsEl = orderEl.querySelector(".ec-confirmation__actions");
-      var buyAgainBtn = actionsEl?.querySelector(".ec-confirmation__action-link");
+    var actionsEl = orderEl.querySelector(".ec-confirmation__actions");
+    var buyAgainBtn = actionsEl?.querySelector(".ec-confirmation__action-link");
+    if (!actionsEl || !buyAgainBtn) return;
 
-      if (!titleEl || !actionsEl || !buyAgainBtn) return;
+    var orderNumber = getOrderNumberFromEl(orderEl);
+    if (!orderNumber) return;
 
-      var orderNumber = getOrderNumberFromEl(orderEl);
-if (!orderNumber) return;
+    var wrap = document.createElement("div");
+    wrap.className = "custom-return-wrap";
 
-      var wrap = document.createElement("div");
-      wrap.className = "custom-return-wrap";
-
-var btn = document.createElement("button");
-btn.className = "custom-return-btn";
-btn.dataset.orderNumber = orderNumber;
-btn.textContent = "Checking return…";
-btn.disabled = true;
-
-fetch("https://shellalalnoor.com/return-status?=" + )
-  .then(r => r.json())
-  .then(data => {
-    btn.disabled = false;
-
-    if (data.status === "RETURNED") {
-      btn.textContent = "Return Completed";
-      btn.disabled = true;
-      return;
-    }
-
-    if (data.hasReturn) {
-      btn.textContent = "Cancel Return";
-      btn.onclick = function () {
-        cancelReturn(orderNumber);
-      };
-    } else {
-      btn.textContent = "Request Return";
-      btn.onclick = function () {
-        injectModal();
-        document.getElementById("return-order-id").value = orderNumber;
-        document.getElementById("return-title").value = "";
-        document.getElementById("return-reason").value = "";
-        document.getElementById("return-submit").disabled = true;
-        document.getElementById("return-modal").classList.add("active");
-      };
-    }
-  })
-  .catch(() => {
-    btn.disabled = false;
+    var btn = document.createElement("button");
+    btn.className = "custom-return-btn";
+    btn.dataset.orderNumber = orderNumber;
     btn.textContent = "Request Return";
+    btn.disabled = true;
+
+    wrap.appendChild(btn);
+    buyAgainBtn.insertAdjacentElement("afterend", wrap);
+
+    // 🔄 NOW check return status
+    fetch("https://shellalalnoor.com/return-status?orderNumber=" + orderNumber)
+      .then(r => r.json())
+      .then(data => {
+        btn.disabled = false;
+
+        if (data.status === "RETURNED") {
+          btn.textContent = "Return Completed";
+          btn.disabled = true;
+          return;
+        }
+
+        if (data.hasReturn) {
+          btn.textContent = "Cancel Return";
+          btn.onclick = function () {
+            cancelReturn(orderNumber);
+          };
+        } else {
+          btn.textContent = "Request Return";
+          btn.onclick = function () {
+            injectModal();
+            document.getElementById("return-order-id").value = orderNumber;
+            document.getElementById("return-title").value = "";
+            document.getElementById("return-reason").value = "";
+            document.getElementById("return-submit").disabled = true;
+            document.getElementById("return-modal").classList.add("active");
+          };
+        }
+      })
+      .catch(() => {
+        btn.disabled = false;
+        btn.textContent = "Request Return";
+      });
+
+    log("Return button injected for order", orderNumber);
   });
-
-      wrap.appendChild(btn);
-      buyAgainBtn.insertAdjacentElement("afterend", wrap);
-
-      log("Return button injected for order", orderNumber);
-    });
-  }
+}
 
   /* ---------- EVENTS ---------- */
   document.addEventListener("click", function (e) {
@@ -456,4 +455,5 @@ if (e.target.id === "return-submit") {
     observer.observe(document.body, { childList: true, subtree: true });
   });
 })();
+
 
