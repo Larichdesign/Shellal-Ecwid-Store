@@ -29,7 +29,7 @@ function getOrderNumberFromEl(orderEl) {
 }
 
 function cancelReturn(orderNumber) {
-  fetch("https://shellalalnoor.com/cancel-return", {
+  fetch("https://shellalalnoor.com/cancel-return-pickup", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
@@ -456,3 +456,4 @@ if (e.target.id === "return-submit") {
     observer.observe(document.body, { childList: true, subtree: true });
   });
 })();
+
