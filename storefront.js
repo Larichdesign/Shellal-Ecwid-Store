@@ -196,24 +196,35 @@ safeOnPageLoaded(function (page) {
     log("Styles injected");
   }
 
-  function injectModal() {
-    if (document.getElementById("return-modal")) return;
-    var m = document.createElement("div");
-    m.id = "return-modal";
-    m.innerHTML = `
-      <div class="return-overlay"></div>
-      <div class="return-box">
-        <h2>Request a Return</h2>
-        <input type="hidden" id="return-order-id">
-        <textarea id="return-reason" placeholder="Reason for return"></textarea>
-        <div class="return-actions">
-          <button id="return-submit">Submit</button>
-          <button id="return-cancel">Cancel</button>
-        </div>
-      </div>`;
-    document.body.appendChild(m);
-    log("Modal injected");
-  }
+function injectModal() {
+  if (document.getElementById("return-modal")) return;
+
+  var m = document.createElement("div");
+  m.id = "return-modal";
+  m.innerHTML = `
+    <div class="return-overlay"></div>
+    <div class="return-box">
+      <label for="return-title" class="return-label">Return title</label>
+      <input
+        type="text"
+        id="return-title"
+        placeholder="e.g. Wrong size, damaged item"
+      />
+
+      <label for="return-reason" class="return-label">Reason for return</label>
+      <textarea
+        id="return-reason"
+        placeholder="Please explain the reason for return"
+      ></textarea>
+
+      <div class="return-actions">
+        <button id="return-submit">Submit</button>
+        <button id="return-cancel">Cancel</button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(m);
+}
 
  function injectButton(order) {
   var actions = document.querySelector(".ec-confirmation__actions");
@@ -275,7 +286,13 @@ safeOnPageLoaded(function (page) {
 
     if (e.target.id === "return-submit") {
       var id = document.getElementById("return-order-id").value;
+      var title = document.getElementById("return-title").value.trim();
       var reason = document.getElementById("return-reason").value.trim();
+
+if (!title || !reason) {
+  alert("Please fill in both title and reason");
+  return;
+}
       if (!reason) return alert("Provide a reason");
 
       log("Submitting return", id, reason);
@@ -285,7 +302,10 @@ safeOnPageLoaded(function (page) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           orderId: id,
-          note: PREFIX + "\nReason: " + reason
+          note:
+    "[RETURN REQUEST]\n" +
+    "Title: " + title + "\n" +
+    "Reason: " + reason
         })
       }).then(function (r) {
         log("Return handler status", r.status);
@@ -340,6 +360,7 @@ function waitForOrderActions() {
 }
 
 })();
+
 
 
 
