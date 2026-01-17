@@ -1,3 +1,4 @@
+
 /* =========================================================
    SAFE ECWID LOADERS (CRITICAL)
    ========================================================= */
@@ -21,7 +22,7 @@ function safeOnPageLoaded(handler) {
 }
 
 /* =========================================================
-   TABBY CONFIG (UNCHANGED)
+   TABBY CONFIG (UNCHANGED LOGIC, SAFE HOOKS)
    ========================================================= */
 
 var client_id = "custom-app-123237799-1";
@@ -72,6 +73,98 @@ safeOnApiLoaded(function () {
   if (Ecwid.OnCheckoutChanged && Ecwid.OnCheckoutChanged.add) {
     Ecwid.OnCheckoutChanged.add(toggleTabbyByCountry);
   }
+});
+
+/* =========================================================
+   PRODUCT PAGE – TABBY PROMO
+   ========================================================= */
+
+function loadTabbyPromoScript(cb) {
+  if (window.TabbyPromo) return cb();
+  var s = document.createElement("script");
+  s.src = "https://checkout.tabby.ai/tabby-promo.js";
+  s.onload = cb;
+  document.head.appendChild(s);
+}
+
+function getProductPriceFromDOM() {
+  var el =
+    document.querySelector(".product-details__product-price[itemprop='price']") ||
+    document.querySelector(".ec-price-item[itemprop='price']");
+  if (!el) return null;
+  var c = el.getAttribute("content");
+  if (c) return parseFloat(c).toFixed(2);
+  var t = el.innerText.replace(/[^\d.]/g, "");
+  return t ? parseFloat(t).toFixed(2) : null;
+}
+
+function renderProductTabbyPromoFromDOM() {
+  if (document.getElementById("tabby-promo-product")) return;
+  var price = getProductPriceFromDOM();
+  if (!price) return;
+
+  var block =
+    document.querySelector(".product-details__product-price") ||
+    document.querySelector(".ec-price-item");
+  if (!block) return;
+
+  var d = document.createElement("div");
+  d.id = "tabby-promo-product";
+  d.style.marginTop = "8px";
+  block.appendChild(d);
+
+  new TabbyPromo({
+    selector: "#tabby-promo-product",
+    currency: "AED",
+    price: price,
+    lang: "en",
+    source: "product",
+    publicKey: "pk_019a48dc-9449-c3a6-1f94-ac79d83b5dea",
+    merchantCode: "SHN"
+  });
+}
+
+safeOnPageLoaded(function (page) {
+  if (page.type !== "PRODUCT") return;
+  loadTabbyPromoScript(function () {
+    setTimeout(renderProductTabbyPromoFromDOM, 300);
+  });
+});
+
+/* =========================================================
+   CART – TABBY PROMO
+   ========================================================= */
+
+function renderCartTabbyPromo(cart) {
+  if (!cart || !cart.total) return;
+  if (document.getElementById("tabby-promo-cart")) return;
+
+  var d = document.createElement("div");
+  d.id = "tabby-promo-cart";
+
+  var row =
+    document.querySelector(".ec-cart-summary") ||
+    document.querySelector(".ec-cart__footer");
+  if (!row) return;
+
+  row.appendChild(d);
+
+  new TabbyPromo({
+    selector: "#tabby-promo-cart",
+    currency: cart.currency || "AED",
+    price: cart.total.toFixed(2),
+    lang: "en",
+    source: "cart",
+    publicKey: "pk_019a48dc-9449-c3a6-1f94-ac79d83b5dea",
+    merchantCode: "SHN"
+  });
+}
+
+safeOnPageLoaded(function (page) {
+  if (page.type !== "CART") return;
+  loadTabbyPromoScript(function () {
+    Ecwid.Cart.get(renderCartTabbyPromo);
+  });
 });
 
 /* =========================================================
@@ -241,4 +334,5 @@ safeOnApiLoaded(function () {
     injectButton(match[1]);
   });
 })();
+
 
