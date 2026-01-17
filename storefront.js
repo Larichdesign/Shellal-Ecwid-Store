@@ -215,31 +215,56 @@ safeOnPageLoaded(function (page) {
     log("Modal injected");
   }
 
-  function injectButton(order) {
-    var actions = document.querySelector(".ec-confirmation__actions");
-    log("Actions container:", !!actions);
-    if (!actions || document.getElementById("custom-return-btn")) return;
+ function injectButton(order) {
+  var actions = document.querySelector(".ec-confirmation__actions");
+  log("Actions container found:", !!actions);
+  if (!actions) return;
 
-    var wrap = document.createElement("div");
-    wrap.className =
-      "ec-confirmation__action-link ec-confirmation__action-link--desktop";
-
-    var btn = document.createElement("button");
-    btn.id = "custom-return-btn";
-    btn.className =
-      "form-control form-control--button form-control--medium";
-    btn.textContent = "Request Return";
-
-    btn.onclick = function () {
-      log("Return clicked", order.id);
-      document.getElementById("return-order-id").value = order.id;
-      document.getElementById("return-modal").classList.add("active");
-    };
-
-    wrap.appendChild(btn);
-    actions.appendChild(wrap);
-    log("Return button injected");
+  if (document.getElementById("custom-return-btn")) {
+    log("Return button already exists");
+    return;
   }
+
+  // Find the Buy Again wrapper (first action-link)
+  var actionLinks = actions.querySelectorAll(
+    ".ec-confirmation__action-link--desktop"
+  );
+
+  if (!actionLinks.length) {
+    log("No action links found");
+    return;
+  }
+
+  var buyAgainWrapper = actionLinks[0];
+  log("Buy Again wrapper found");
+
+  // Create wrapper (must match Ecwid structure)
+  var wrapper = document.createElement("div");
+  wrapper.className =
+    "ec-confirmation__action-link ec-confirmation__action-link--desktop";
+
+  // Create button
+  var btn = document.createElement("button");
+  btn.id = "custom-return-btn";
+  btn.type = "button";
+  btn.className =
+    "form-control form-control--button form-control--medium";
+  btn.textContent = "Request Return";
+
+  btn.onclick = function () {
+    log("Return button clicked", order.id);
+    document.getElementById("return-order-id").value = order.id;
+    document.getElementById("return-modal").classList.add("active");
+  };
+
+  wrapper.appendChild(btn);
+
+  // 🔑 Insert DIRECTLY AFTER "Buy again"
+  buyAgainWrapper.insertAdjacentElement("afterend", wrapper);
+
+  log("Return button injected below Buy Again");
+}
+
 
   document.addEventListener("click", function (e) {
     if (e.target.id === "return-cancel" ||
@@ -282,3 +307,4 @@ safeOnPageLoaded(function (page) {
     });
   });
 })();
+
