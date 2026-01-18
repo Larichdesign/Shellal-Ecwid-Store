@@ -190,22 +190,19 @@ safeOnPageLoaded(function (page) {
 });
 
 /* =========================================================
-   CART – TABBY PROMO (SAFE AUTO REFRESH)
+   CART – TABBY PROMO (NO AUTO REFRESH)
    ========================================================= */
 
-function renderCartTabbyPromo(cart) {
+function renderCartTabbyPromoOnce(cart) {
   if (!cart || typeof cart.total !== "number") return;
+  if (document.getElementById("tabby-promo-cart")) return;
 
-  var existing = document.getElementById("tabby-promo-cart");
-  if (existing) existing.remove();
-
-  var row =
+  const row =
     document.querySelector(".ec-cart-summary") ||
     document.querySelector(".ec-cart__footer");
-
   if (!row) return;
 
-  var d = document.createElement("div");
+  const d = document.createElement("div");
   d.id = "tabby-promo-cart";
   row.appendChild(d);
 
@@ -220,42 +217,38 @@ function renderCartTabbyPromo(cart) {
   });
 }
 
-/* Initial render */
 safeOnPageLoaded(function (page) {
   if (page.type !== "CART") return;
 
-  loadTabbyPromoScript(function () {
-    Ecwid.Cart.get(renderCartTabbyPromo);
+  loadTabbyPromoScript(() => {
+    Ecwid.Cart.get(renderCartTabbyPromoOnce);
   });
 });
 
-/* 🔥 ONLY refresh when cart actually changes */
-safeOnApiLoaded(function () {
-  if (Ecwid.OnCartChanged && Ecwid.OnCartChanged.add) {
-    Ecwid.OnCartChanged.add(function (cart) {
-      renderCartTabbyPromo(cart);
-    });
-  }
-});
-
 /* =========================================================
-   CHECKOUT – TABBY CARD (SAFE AUTO REFRESH)
+   CHECKOUT – TABBY CARD (NO AUTO REFRESH)
    ========================================================= */
 
-function renderCheckoutTabbyCard(cart) {
+function loadTabbyCardScript(cb) {
+  if (window.TabbyCard) return cb();
+  const s = document.createElement("script");
+  s.src = "https://checkout.tabby.ai/tabby-card.js";
+  s.onload = cb;
+  document.head.appendChild(s);
+}
+
+function renderCheckoutTabbyOnce(cart) {
   if (!cart || typeof cart.total !== "number") return;
 
-  var containerId = "tabby-card-checkout";
-  var tabbyMethod = document.querySelector(
+  const containerId = "tabby-card-checkout";
+  const tabbyMethod = document.querySelector(
     ".ec-radiogroup__item--app_id-custom-app-123237799-1"
   );
-
   if (!tabbyMethod) return;
 
-  var existing = document.getElementById(containerId);
-  if (existing) existing.remove();
+  if (document.getElementById(containerId)) return;
 
-  var d = document.createElement("div");
+  const d = document.createElement("div");
   d.id = containerId;
   d.style.marginTop = "12px";
   tabbyMethod.appendChild(d);
@@ -270,22 +263,12 @@ function renderCheckoutTabbyCard(cart) {
   });
 }
 
-/* Initial render */
 safeOnPageLoaded(function (page) {
   if (page.type !== "CHECKOUT_PAYMENT_DETAILS") return;
 
-  loadTabbyCardScript(function () {
-    Ecwid.Cart.get(renderCheckoutTabbyCard);
+  loadTabbyCardScript(() => {
+    Ecwid.Cart.get(renderCheckoutTabbyOnce);
   });
-});
-
-/* 🔥 Refresh ONLY when checkout total changes */
-safeOnApiLoaded(function () {
-  if (Ecwid.OnCheckoutChanged && Ecwid.OnCheckoutChanged.add) {
-    Ecwid.OnCheckoutChanged.add(function () {
-      Ecwid.Cart.get(renderCheckoutTabbyCard);
-    });
-  }
 });
 
 /* =========================================================
@@ -796,6 +779,7 @@ else {
     });
   });
 })();
+
 
 
 
