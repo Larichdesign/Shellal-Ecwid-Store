@@ -572,13 +572,13 @@ function showSuccess() {
   ========================================================= */
  function injectButtons() {
   document.querySelectorAll(".ec-cart__order").forEach(function (orderEl) {
-    if (orderEl.querySelector(".custom-return-wrap")) return;
+    if (orderEl.dataset.returnInjected === "1") return;
+orderEl.dataset.returnInjected = "1";
 
-    var titleEl = orderEl.querySelector(".ec-confirmation__title");
     var actionsEl = orderEl.querySelector(".ec-confirmation__actions");
-    var buyAgainBtn = actionsEl?.querySelector(".ec-confirmation__action-link");
+    var titleEl = orderEl.querySelector(".ec-confirmation__title");
 
-    if (!titleEl || !buyAgainBtn) return;
+    if (!actionsEl || !titleEl) return;
 
     var match = titleEl.textContent.match(/#(\d+)/);
     if (!match) return;
@@ -656,7 +656,7 @@ function showSuccess() {
 
       wrap.appendChild(btn);
       wrap.appendChild(meta);
-      buyAgainBtn.insertAdjacentElement("afterend", wrap);
+      actionsEl.insertAdjacentElement("afterend", wrap);
     });
   });
 }
@@ -715,6 +715,7 @@ function showSuccess() {
     });
   });
 })();
+
 
 
 
