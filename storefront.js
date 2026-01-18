@@ -577,8 +577,9 @@ orderEl.dataset.returnInjected = "1";
 
     var actionsEl = orderEl.querySelector(".ec-confirmation__actions");
     var titleEl = orderEl.querySelector(".ec-confirmation__title");
+      var buyAgainBtn = actionsEl?.querySelector(".ec-confirmation__action-link");
 
-    if (!actionsEl || !titleEl) return;
+    if (!buyAgainBtn || !titleEl) return;
 
     var match = titleEl.textContent.match(/#(\d+)/);
     if (!match) return;
@@ -656,7 +657,7 @@ orderEl.dataset.returnInjected = "1";
 
       wrap.appendChild(btn);
       wrap.appendChild(meta);
-      actionsEl.insertAdjacentElement("afterend", wrap);
+      buyAgainBtn.insertAdjacentElement("afterend", wrap);
     });
   });
 }
@@ -715,6 +716,7 @@ orderEl.dataset.returnInjected = "1";
     });
   });
 })();
+
 
 
 
