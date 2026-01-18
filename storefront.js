@@ -326,6 +326,34 @@ if (Ecwid.OnCheckoutChanged && Ecwid.OnCheckoutChanged.add) {
         gap: 10px;
       }
 
+      .return-spinner {
+  width: 16px;
+  height: 16px;
+  border: 2px solid #ccc;
+  border-top-color: #000;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+  display: inline-block;
+  vertical-align: middle;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.return-meta {
+  margin-top: 6px;
+  font-size: 13px;
+  color: #666;
+}
+
+.return-success {
+  margin-top: 8px;
+  color: #0a7a3b;
+  font-weight: 500;
+}
+
+
       #return-submit {
         background: #000;
         color: #fff;
@@ -344,6 +372,29 @@ if (Ecwid.OnCheckoutChanged && Ecwid.OnCheckoutChanged.add) {
         border: 1px solid #ccc;
         padding: 8px 16px;
       }
+
+      #custom-cancel-return-btn {
+  background: transparent;
+  font-family: "DM Sans", system-ui, sans-serif;
+  font-weight: 500;
+  color: #000;
+  padding: 8px 24px;
+  min-height: 40px;
+  font-size: 14px;
+  border-radius: 4px;
+  border: 1px solid #ccc;
+  cursor: pointer;
+}
+
+#custom-cancel-return-btn:hover {
+  background: #f5f5f5;
+}
+
+#custom-cancel-return-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
     `;
     document.head.appendChild(s);
   }
@@ -402,15 +453,10 @@ if (Ecwid.OnCheckoutChanged && Ecwid.OnCheckoutChanged.add) {
       };
   }
 
-   function getReturnStatus(orderNumber) {
+  function getReturnStatus(orderNumber) {
   return fetch("/return-status?orderNumber=" + orderNumber)
-    .then(function (r) {
-      if (!r.ok) return null;
-      return r.json();
-    })
-    .catch(function () {
-      return null;
-    });
+    .then(r => r.ok ? r.json() : null)
+    .catch(() => null);
 }
 
 
@@ -435,37 +481,61 @@ if (Ecwid.OnCheckoutChanged && Ecwid.OnCheckoutChanged.add) {
     var wrap = document.createElement("div");
     wrap.className = "custom-return-wrap";
 
-    // check return status FIRST
-    getReturnStatus(orderNumber).then(function (returnData) {
+    getReturnStatus(orderNumber).then(function (rs) {
       var btn = document.createElement("button");
+      var meta = document.createElement("div");
+      meta.className = "return-meta";
 
-      if (returnData && returnData.status !== "CANCELLED") {
-        /* ===============================
-           CANCEL RETURN
-        =============================== */
+      /* =========================
+         RETURN WINDOW MESSAGE
+      ========================= */
+      if (rs?.exists && !rs.windowExpired) {
+        meta.textContent = `Return window: ${rs.daysLeft} day(s) left`;
+      }
+
+      if (rs?.windowExpired) {
+        meta.textContent = "Return window expired";
+      }
+
+      /* =========================
+         CANCEL RETURN
+      ========================= */
+      if (rs?.exists && rs.status !== "CANCELLED") {
         btn.id = "custom-cancel-return-btn";
         btn.textContent = "Cancel Return";
 
-        btn.onclick = function () {
+        if (rs.pickupStatus === "COLLECTED") {
           btn.disabled = true;
-          btn.textContent = "Cancelling...";
+          meta.textContent = "Pickup already collected";
+        } else if (rs.windowExpired) {
+          btn.style.display = "none";
+        } else {
+          btn.onclick = function () {
+            btn.disabled = true;
+            btn.innerHTML = `<span class="return-spinner"></span>`;
 
-          fetch("/cancel-return", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              orderNumber: orderNumber
-            })
-          }).then(function () {
-            location.reload();
-          });
-        };
-      } else {
-        /* ===============================
-           REQUEST RETURN
-        =============================== */
+            fetch("/cancel-return", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ orderNumber })
+            }).then(function () {
+              meta.innerHTML =
+                `<div class="return-success">Return cancelled successfully</div>`;
+            });
+          };
+        }
+      }
+
+      /* =========================
+         REQUEST RETURN
+      ========================= */
+      else {
         btn.id = "custom-return-btn";
         btn.textContent = "Request Return";
+
+        if (rs?.windowExpired) {
+          btn.disabled = true;
+        }
 
         btn.onclick = function () {
           injectModal();
@@ -478,13 +548,11 @@ if (Ecwid.OnCheckoutChanged && Ecwid.OnCheckoutChanged.add) {
       }
 
       wrap.appendChild(btn);
+      wrap.appendChild(meta);
       buyAgainBtn.insertAdjacentElement("afterend", wrap);
-
-      log("Return UI injected for order", orderNumber);
     });
   });
 }
-
 
   /* =========================================================
      EVENTS
@@ -504,7 +572,7 @@ if (Ecwid.OnCheckoutChanged && Ecwid.OnCheckoutChanged.add) {
       var reason = document.getElementById("return-reason").value.trim();
 
       e.target.disabled = true;
-      e.target.textContent = "Submitting...";
+      e.target.innerHTML = `<span class="return-spinner"></span>`;
 
       fetch("/request-return", {
         method: "POST",
@@ -540,4 +608,5 @@ if (Ecwid.OnCheckoutChanged && Ecwid.OnCheckoutChanged.add) {
     });
   });
 })();
+
 
