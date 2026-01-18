@@ -50,12 +50,12 @@ function getReturnStatus(orderNumber) {
 }
 
 
-/* =========================================================
-   TABBY CONFIG (UNCHANGED LOGIC, SAFE HOOKS)
-   ========================================================= */
-
 var client_id = "custom-app-123237799-1";
 var image_link = "https://iili.io/fAXNFcu.png";
+
+/* =========================================================
+   CHECKOUT ICON + COUNTRY FILTER
+   ========================================================= */
 
 function addTabbyIcon() {
   var target = document.querySelector(
@@ -75,37 +75,32 @@ function addTabbyIcon() {
 
 function toggleTabbyByCountry() {
   Ecwid.Cart.get(function (cart) {
-    if (!cart || !cart.shippingPerson) return;
+    if (!cart?.shippingPerson) return;
+
     var tabby = document.querySelector(
       ".ec-radiogroup__item--app_id-" + client_id
     );
     if (!tabby) return;
+
     tabby.style.display =
       cart.shippingPerson.countryCode === "AE" ? "" : "none";
   });
 }
 
-function isCheckoutPage(page) {
-  if (typeof page === "string") return page.indexOf("checkout") === 0;
-  if (typeof page === "object" && page.type)
-    return page.type.indexOf("CHECKOUT_") === 0;
-  return false;
-}
-
 safeOnApiLoaded(function () {
   safeOnPageLoaded(function (page) {
-    if (!isCheckoutPage(page)) return;
+    if (page?.type?.indexOf("CHECKOUT_") !== 0) return;
     addTabbyIcon();
     toggleTabbyByCountry();
   });
 
-  if (Ecwid.OnCheckoutChanged && Ecwid.OnCheckoutChanged.add) {
+  if (Ecwid.OnCheckoutChanged?.add) {
     Ecwid.OnCheckoutChanged.add(toggleTabbyByCountry);
   }
 });
 
 /* =========================================================
-   PRODUCT PAGE – TABBY PROMO
+   LOAD TABBY PROMO SCRIPT (SHARED)
    ========================================================= */
 
 function loadTabbyPromoScript(cb) {
@@ -116,21 +111,29 @@ function loadTabbyPromoScript(cb) {
   document.head.appendChild(s);
 }
 
+/* =========================================================
+   PRODUCT PAGE – AUTO REFRESH PROMO
+   ========================================================= */
+
 function getProductPriceFromDOM() {
   var el =
     document.querySelector(".product-details__product-price[itemprop='price']") ||
     document.querySelector(".ec-price-item[itemprop='price']");
   if (!el) return null;
-  var c = el.getAttribute("content");
-  if (c) return parseFloat(c).toFixed(2);
-  var t = el.innerText.replace(/[^\d.]/g, "");
-  return t ? parseFloat(t).toFixed(2) : null;
+
+  var content = el.getAttribute("content");
+  if (content) return parseFloat(content).toFixed(2);
+
+  var text = el.innerText.replace(/[^\d.]/g, "");
+  return text ? parseFloat(text).toFixed(2) : null;
 }
 
-function renderProductTabbyPromoFromDOM() {
-  if (document.getElementById("tabby-promo-product")) return;
+function renderProductTabbyPromo() {
   var price = getProductPriceFromDOM();
   if (!price) return;
+
+  var existing = document.getElementById("tabby-promo-product");
+  if (existing) existing.remove();
 
   var block =
     document.querySelector(".product-details__product-price") ||
@@ -153,29 +156,56 @@ function renderProductTabbyPromoFromDOM() {
   });
 }
 
+/* 🔍 WATCH PRODUCT PRICE CHANGES */
+function watchProductPriceChanges() {
+  var priceEl =
+    document.querySelector(".product-details__product-price") ||
+    document.querySelector(".ec-price-item");
+
+  if (!priceEl) return;
+
+  let last = priceEl.innerText;
+
+  new MutationObserver(function () {
+    if (priceEl.innerText !== last) {
+      last = priceEl.innerText;
+      renderProductTabbyPromo();
+    }
+  }).observe(priceEl, {
+    childList: true,
+    subtree: true,
+    characterData: true
+  });
+}
+
 safeOnPageLoaded(function (page) {
   if (page.type !== "PRODUCT") return;
+
   loadTabbyPromoScript(function () {
-    setTimeout(renderProductTabbyPromoFromDOM, 300);
+    setTimeout(function () {
+      renderProductTabbyPromo();
+      watchProductPriceChanges();
+    }, 300);
   });
 });
 
 /* =========================================================
-   CART – TABBY PROMO
+   CART PAGE – AUTO REFRESH PROMO
    ========================================================= */
 
 function renderCartTabbyPromo(cart) {
-  if (!cart || !cart.total) return;
-  if (document.getElementById("tabby-promo-cart")) return;
+  if (!cart?.total) return;
 
-  var d = document.createElement("div");
-  d.id = "tabby-promo-cart";
+  var existing = document.getElementById("tabby-promo-cart");
+  if (existing) existing.remove();
 
   var row =
     document.querySelector(".ec-cart-summary") ||
     document.querySelector(".ec-cart__footer");
   if (!row) return;
 
+  var d = document.createElement("div");
+  d.id = "tabby-promo-cart";
   row.appendChild(d);
 
   new TabbyPromo({
@@ -191,42 +221,49 @@ function renderCartTabbyPromo(cart) {
 
 safeOnPageLoaded(function (page) {
   if (page.type !== "CART") return;
+
   loadTabbyPromoScript(function () {
     Ecwid.Cart.get(renderCartTabbyPromo);
   });
 });
 
+safeOnApiLoaded(function () {
+  if (Ecwid.OnCartChanged?.add) {
+    Ecwid.OnCartChanged.add(function (cart) {
+      renderCartTabbyPromo(cart);
+    });
+  }
+});
+
 /* =========================================================
-   CHECKOUT – TABBY PROMO
+   CHECKOUT – TABBY CARD AUTO REFRESH
    ========================================================= */
 
-function loadTabbyCardScript(callback) {
-  if (window.TabbyCard) return callback();
+function loadTabbyCardScript(cb) {
+  if (window.TabbyCard) return cb();
 
   var s = document.createElement("script");
   s.src = "https://checkout.tabby.ai/tabby-card.js";
-  s.onload = callback;
+  s.onload = cb;
   document.head.appendChild(s);
 }
 
-
 function renderCheckoutTabbyCard(cart) {
+  if (!cart?.total) return;
+
   var containerId = "tabby-card-checkout";
-
   var tabbyMethod = document.querySelector(
-    ".ec-radiogroup__item--app_id-custom-app-123237799-1"
+    ".ec-radiogroup__item--app_id-" + client_id
   );
-
   if (!tabbyMethod) return;
 
   var existing = document.getElementById(containerId);
   if (existing) existing.remove();
 
-  var container = document.createElement("div");
-  container.id = containerId;
-  container.style.marginTop = "12px";
-
-  tabbyMethod.appendChild(container);
+  var d = document.createElement("div");
+  d.id = containerId;
+  d.style.marginTop = "12px";
+  tabbyMethod.appendChild(d);
 
   new TabbyCard({
     selector: "#" + containerId,
@@ -238,23 +275,15 @@ function renderCheckoutTabbyCard(cart) {
   });
 }
 
-
 safeOnPageLoaded(function (page) {
-  if (
-    typeof page !== "object" ||
-    page.type !== "CHECKOUT_PAYMENT_DETAILS"
-  )
-    return;
+  if (page.type !== "CHECKOUT_PAYMENT_DETAILS") return;
 
   loadTabbyCardScript(function () {
-    Ecwid.Cart.get(function (cart) {
-      if (cart.shippingPerson?.countryCode !== "AE") return;
-      renderCheckoutTabbyCard(cart);
-    });
+    Ecwid.Cart.get(renderCheckoutTabbyCard);
   });
 });
 
-if (Ecwid.OnCheckoutChanged && Ecwid.OnCheckoutChanged.add) {
+if (Ecwid.OnCheckoutChanged?.add) {
   Ecwid.OnCheckoutChanged.add(function () {
     Ecwid.Cart.get(renderCheckoutTabbyCard);
   });
@@ -768,6 +797,7 @@ else {
     });
   });
 })();
+
 
 
 
