@@ -190,11 +190,11 @@ safeOnPageLoaded(function (page) {
 });
 
 /* =========================================================
-   CART PAGE – AUTO REFRESH PROMO
+   CART – TABBY PROMO (SAFE AUTO REFRESH)
    ========================================================= */
 
 function renderCartTabbyPromo(cart) {
-  if (!cart?.total) return;
+  if (!cart || typeof cart.total !== "number") return;
 
   var existing = document.getElementById("tabby-promo-cart");
   if (existing) existing.remove();
@@ -202,6 +202,7 @@ function renderCartTabbyPromo(cart) {
   var row =
     document.querySelector(".ec-cart-summary") ||
     document.querySelector(".ec-cart__footer");
+
   if (!row) return;
 
   var d = document.createElement("div");
@@ -219,6 +220,7 @@ function renderCartTabbyPromo(cart) {
   });
 }
 
+/* Initial render */
 safeOnPageLoaded(function (page) {
   if (page.type !== "CART") return;
 
@@ -227,8 +229,9 @@ safeOnPageLoaded(function (page) {
   });
 });
 
+/* 🔥 ONLY refresh when cart actually changes */
 safeOnApiLoaded(function () {
-  if (Ecwid.OnCartChanged?.add) {
+  if (Ecwid.OnCartChanged && Ecwid.OnCartChanged.add) {
     Ecwid.OnCartChanged.add(function (cart) {
       renderCartTabbyPromo(cart);
     });
@@ -236,25 +239,17 @@ safeOnApiLoaded(function () {
 });
 
 /* =========================================================
-   CHECKOUT – TABBY CARD AUTO REFRESH
+   CHECKOUT – TABBY CARD (SAFE AUTO REFRESH)
    ========================================================= */
 
-function loadTabbyCardScript(cb) {
-  if (window.TabbyCard) return cb();
-
-  var s = document.createElement("script");
-  s.src = "https://checkout.tabby.ai/tabby-card.js";
-  s.onload = cb;
-  document.head.appendChild(s);
-}
-
 function renderCheckoutTabbyCard(cart) {
-  if (!cart?.total) return;
+  if (!cart || typeof cart.total !== "number") return;
 
   var containerId = "tabby-card-checkout";
   var tabbyMethod = document.querySelector(
-    ".ec-radiogroup__item--app_id-" + client_id
+    ".ec-radiogroup__item--app_id-custom-app-123237799-1"
   );
+
   if (!tabbyMethod) return;
 
   var existing = document.getElementById(containerId);
@@ -275,6 +270,7 @@ function renderCheckoutTabbyCard(cart) {
   });
 }
 
+/* Initial render */
 safeOnPageLoaded(function (page) {
   if (page.type !== "CHECKOUT_PAYMENT_DETAILS") return;
 
@@ -283,11 +279,14 @@ safeOnPageLoaded(function (page) {
   });
 });
 
-if (Ecwid.OnCheckoutChanged?.add) {
-  Ecwid.OnCheckoutChanged.add(function () {
-    Ecwid.Cart.get(renderCheckoutTabbyCard);
-  });
-}
+/* 🔥 Refresh ONLY when checkout total changes */
+safeOnApiLoaded(function () {
+  if (Ecwid.OnCheckoutChanged && Ecwid.OnCheckoutChanged.add) {
+    Ecwid.OnCheckoutChanged.add(function () {
+      Ecwid.Cart.get(renderCheckoutTabbyCard);
+    });
+  }
+});
 
 /* =========================================================
    RETURN FEATURE – FINAL (STABLE + ECWID-SAFE)
@@ -797,6 +796,7 @@ else {
     });
   });
 })();
+
 
 
 
