@@ -627,32 +627,43 @@ function showSuccess() {
       }
 
       /* =========================
-         RETURN IN PROGRESS
-      ========================= */
-      else {
-        btn.id = "custom-cancel-return-btn";
-        btn.textContent = "Cancel Return";
-        meta.textContent = "Your return is in progress";
+   RETURN EXISTS
+========================= */
+else {
+  // 🚫 Pickup NOT created yet → no cancel allowed
+  if (rs.pickupStatus === "PENDING") {
+    btn.id = "custom-cancel-return-btn";
+    btn.textContent = "Cancel Return";
+    btn.disabled = true;
+    meta.textContent = "Your return is in progress";
+  }
 
-        if (rs.pickupStatus === "COLLECTED") {
-          btn.disabled = true;
-          meta.textContent = "Pickup already collected";
-        }
+  // ✅ Pickup created → cancel allowed
+  else {
+    btn.id = "custom-cancel-return-btn";
+    btn.textContent = "Cancel Return";
+    meta.textContent = "Return scheduled. You can cancel before pickup.";
 
-        btn.onclick = function () {
-          btn.disabled = true;
-          btn.innerHTML = `<span class="return-spinner"></span>`;
+    if (rs.pickupStatus === "COLLECTED") {
+      btn.disabled = true;
+      meta.textContent = "Pickup already collected";
+    } else {
+      btn.onclick = function () {
+        btn.disabled = true;
+        btn.innerHTML = `<span class="return-spinner"></span>`;
 
-          fetch("/cancel-return-pickup", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ orderNumber })
-          }).then(function () {
-            meta.textContent = "Return cancelled successfully";
-            btn.remove();
-          });
-        };
-      }
+        fetch("/cancel-return-pickup", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ orderNumber })
+        }).then(function () {
+          meta.textContent = "Return cancelled successfully";
+          btn.remove();
+        });
+      };
+    }
+  }
+}
 
       wrap.appendChild(btn);
       wrap.appendChild(meta);
@@ -716,6 +727,7 @@ function showSuccess() {
     });
   });
 })();
+
 
 
 
