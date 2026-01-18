@@ -306,9 +306,24 @@ if (Ecwid.OnCheckoutChanged && Ecwid.OnCheckoutChanged.add) {
       #custom-return-btn:hover { background: #222; }
 
       .custom-return-wrap {
-  gap: 8px;
+   display: block;        
+  width: 100%;            
   margin-top: 8px;
       }
+
+      .custom-return-wrap > button,
+.custom-return-wrap > .return-meta {
+  display: block;
+  margin-top: 6px;
+}
+.custom-return-wrap button {
+  align-self: flex-start;
+}
+
+
+      .ec-confirmation__actions {
+gap: 8px;
+}
 
       #return-modal { display: none; }
       #return-modal.active { display: block; }
@@ -700,6 +715,7 @@ function showSuccess() {
     });
   });
 })();
+
 
 
 
