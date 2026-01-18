@@ -656,7 +656,7 @@ orderEl.dataset.returnInjected = "1";
 
       wrap.appendChild(btn);
       wrap.appendChild(meta);
-      actionsEl.insertAdjacentElement("afterend", wrap);
+      actionsEl.appendChild(wrap);
     });
   });
 }
@@ -715,6 +715,7 @@ orderEl.dataset.returnInjected = "1";
     });
   });
 })();
+
 
 
 
