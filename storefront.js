@@ -532,7 +532,7 @@ function showSuccess() {
         cancelBtn.disabled = true;
         cancelBtn.innerHTML = `<span class="return-spinner"></span>`;
 
-        fetch("/cancel-return", {
+        fetch("/cancel-return-pickup", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ orderNumber })
@@ -605,7 +605,7 @@ function showSuccess() {
             btn.disabled = true;
             btn.innerHTML = `<span class="return-spinner"></span>`;
 
-            fetch("/cancel-return", {
+            fetch("/cancel-return-pickup", {
               method: "POST",
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify({ orderNumber })
@@ -699,6 +699,7 @@ function showSuccess() {
     });
   });
 })();
+
 
 
 
