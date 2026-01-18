@@ -304,6 +304,11 @@ if (Ecwid.OnCheckoutChanged && Ecwid.OnCheckoutChanged.add) {
       }
 
       #custom-return-btn:hover { background: #222; }
+      #custom-return-btn:disabled {
+  background: #ccc;
+  color: #777;
+  cursor: not-allowed;
+}
 
     .custom-return-wrap {
   display: flex;
@@ -361,22 +366,32 @@ gap: 8px;
         display: block;
         margin-bottom: 6px;
         font-weight: 500;
+         font-size: 14px;
+         font-weight: 500;
+         font-family: "DM Sans", system-ui, sans-serif;
       }
 
       #return-title,
       #return-reason {
         width: 100%;
         padding: 8px 12px;
-        margin-bottom: 14px;
+        margin-bottom: 16px;
         border: 1px solid #ccc;
         border-radius: 4px;
+        font-weight: 400;
+        font-size: 14px;
+        box-sizing: border-box;
         font-family: "DM Sans", system-ui, sans-serif;
       }
+      #return-reason {
+  resize: vertical;
+}
 
       .return-actions {
         display: flex;
         justify-content: flex-end;
         gap: 10px;
+        margin-top: 20px;
       }
 
       .return-spinner {
@@ -411,19 +426,45 @@ gap: 8px;
         color: #fff;
         padding: 8px 16px;
         border-radius: 4px;
+        font-family: "DM Sans", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
         font-weight: 500;
+        font-size: 14px;
       }
+
+      #return-submit:hover {
+  background-color: #222;
+}
+
+#return-submit:active {
+  background-color: #000;
+  transform: translateY(1px);
+}
 
       #return-submit:disabled {
         background: #ccc;
-        cursor: not-allowed;
+         color: #888;
+         cursor: not-allowed;
+         opacity: 0.8;
       }
 
       #return-cancel {
         background: transparent;
         border: 1px solid #ccc;
         padding: 8px 16px;
+        font-family: "DM Sans", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+        font-weight: 500;
+        font-size: 14px;
+        color: #000;
       }
+
+      #return-cancel:hover {
+  background-color: #f5f5f5;
+}
+
+#return-cancel:active {
+  background-color: #eee;
+  transform: translateY(1px);
+}
 
       #custom-cancel-return-btn {
   background: transparent;
@@ -727,6 +768,7 @@ else {
     });
   });
 })();
+
 
 
 
