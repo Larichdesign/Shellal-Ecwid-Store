@@ -21,6 +21,7 @@ function safeOnPageLoaded(handler) {
   });
 }
 
+
 /* =========================================================
    TABBY CONFIG (UNCHANGED LOGIC, SAFE HOOKS)
    ========================================================= */
@@ -401,46 +402,89 @@ if (Ecwid.OnCheckoutChanged && Ecwid.OnCheckoutChanged.add) {
       };
   }
 
+   function getReturnStatus(orderNumber) {
+  return fetch("/return-status?orderNumber=" + orderNumber)
+    .then(function (r) {
+      if (!r.ok) return null;
+      return r.json();
+    })
+    .catch(function () {
+      return null;
+    });
+}
+
+
   /* =========================================================
      BUTTON INJECTION
   ========================================================= */
-  function injectButtons() {
-    document.querySelectorAll(".ec-cart__order").forEach(function (orderEl) {
-      if (orderEl.querySelector("#custom-return-btn")) return;
+ function injectButtons() {
+  document.querySelectorAll(".ec-cart__order").forEach(function (orderEl) {
+    if (orderEl.querySelector(".custom-return-wrap")) return;
 
-      var titleEl = orderEl.querySelector(".ec-confirmation__title");
-      var actionsEl = orderEl.querySelector(".ec-confirmation__actions");
-      var buyAgainBtn = actionsEl?.querySelector(".ec-confirmation__action-link");
+    var titleEl = orderEl.querySelector(".ec-confirmation__title");
+    var actionsEl = orderEl.querySelector(".ec-confirmation__actions");
+    var buyAgainBtn = actionsEl?.querySelector(".ec-confirmation__action-link");
 
-      if (!titleEl || !buyAgainBtn) return;
+    if (!titleEl || !buyAgainBtn) return;
 
-      var match = titleEl.textContent.match(/#(\d+)/);
-      if (!match) return;
+    var match = titleEl.textContent.match(/#(\d+)/);
+    if (!match) return;
 
-      var orderNumber = match[1];
+    var orderNumber = match[1];
 
-      var wrap = document.createElement("div");
-      wrap.className = "custom-return-wrap";
+    var wrap = document.createElement("div");
+    wrap.className = "custom-return-wrap";
 
+    // check return status FIRST
+    getReturnStatus(orderNumber).then(function (returnData) {
       var btn = document.createElement("button");
-      btn.id = "custom-return-btn";
-      btn.textContent = "Request Return";
 
-      btn.onclick = function () {
-        injectModal();
-        document.getElementById("return-order-number").value = orderNumber;
-        document.getElementById("return-title").value = "";
-        document.getElementById("return-reason").value = "";
-        document.getElementById("return-submit").disabled = true;
-        document.getElementById("return-modal").classList.add("active");
-      };
+      if (returnData && returnData.status !== "CANCELLED") {
+        /* ===============================
+           CANCEL RETURN
+        =============================== */
+        btn.id = "custom-cancel-return-btn";
+        btn.textContent = "Cancel Return";
+
+        btn.onclick = function () {
+          btn.disabled = true;
+          btn.textContent = "Cancelling...";
+
+          fetch("/cancel-return", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              orderNumber: orderNumber
+            })
+          }).then(function () {
+            location.reload();
+          });
+        };
+      } else {
+        /* ===============================
+           REQUEST RETURN
+        =============================== */
+        btn.id = "custom-return-btn";
+        btn.textContent = "Request Return";
+
+        btn.onclick = function () {
+          injectModal();
+          document.getElementById("return-order-number").value = orderNumber;
+          document.getElementById("return-title").value = "";
+          document.getElementById("return-reason").value = "";
+          document.getElementById("return-submit").disabled = true;
+          document.getElementById("return-modal").classList.add("active");
+        };
+      }
 
       wrap.appendChild(btn);
       buyAgainBtn.insertAdjacentElement("afterend", wrap);
 
-      log("Injected return button for order", orderNumber);
+      log("Return UI injected for order", orderNumber);
     });
-  }
+  });
+}
+
 
   /* =========================================================
      EVENTS
@@ -496,3 +540,4 @@ if (Ecwid.OnCheckoutChanged && Ecwid.OnCheckoutChanged.add) {
     });
   });
 })();
+
