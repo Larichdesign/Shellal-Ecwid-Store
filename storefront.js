@@ -305,15 +305,24 @@ if (Ecwid.OnCheckoutChanged && Ecwid.OnCheckoutChanged.add) {
 
       #custom-return-btn:hover { background: #222; }
 
-      .custom-return-wrap {
-   display: block;        
-  width: 100%;            
-  margin-top: 8px;
-      }
+    .custom-return-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+  margin-top: 10px;
+  width: 100%;
+}
+
+@media (max-width: 768px) {
+  .custom-return-wrap {
+    gap: 8px;
+  }
+}
+
 
       .custom-return-wrap > button,
 .custom-return-wrap > .return-meta {
-  display: block;
   margin-top: 6px;
 }
 .custom-return-wrap button {
@@ -573,76 +582,38 @@ function showSuccess() {
  function injectButtons() {
   document.querySelectorAll(".ec-cart__order").forEach(function (orderEl) {
     if (orderEl.dataset.returnInjected === "1") return;
-orderEl.dataset.returnInjected = "1";
+    orderEl.dataset.returnInjected = "1";
 
-    var actionsEl = orderEl.querySelector(".ec-confirmation__actions");
-    var titleEl = orderEl.querySelector(".ec-confirmation__title");
-      var buyAgainBtn = actionsEl?.querySelector(".ec-confirmation__action-link");
+    const actionsEl = orderEl.querySelector(".ec-confirmation__actions");
+    const titleEl = orderEl.querySelector(".ec-confirmation__title");
 
-    if (!buyAgainBtn || !titleEl) return;
+    if (!actionsEl || !titleEl) return;
 
-    var match = titleEl.textContent.match(/#(\d+)/);
+    const match = titleEl.textContent.match(/#(\d+)/);
     if (!match) return;
 
-    var orderNumber = match[1];
+    const orderNumber = match[1];
 
-    var wrap = document.createElement("div");
+    const wrap = document.createElement("div");
     wrap.className = "custom-return-wrap";
 
     getReturnStatus(orderNumber).then(function (rs) {
-      var btn = document.createElement("button");
-      var meta = document.createElement("div");
+      const btn = document.createElement("button");
+      const meta = document.createElement("div");
       meta.className = "return-meta";
 
       /* =========================
-         RETURN WINDOW MESSAGE
+         REQUEST RETURN STATE
       ========================= */
-      if (rs?.exists && !rs.windowExpired) {
-        meta.textContent = `Return window: ${rs.daysLeft} day(s) left`;
-      }
-
-      if (rs?.windowExpired) {
-        meta.textContent = "Return window expired";
-      }
-
-      /* =========================
-         CANCEL RETURN
-      ========================= */
-      if (rs?.exists && rs.status !== "CANCELLED") {
-        btn.id = "custom-cancel-return-btn";
-        btn.textContent = "Cancel Return";
-
-        if (rs.pickupStatus === "COLLECTED") {
-          btn.disabled = true;
-          meta.textContent = "Pickup already collected";
-        } else if (rs.windowExpired) {
-          btn.style.display = "none";
-        } else {
-          btn.onclick = function () {
-            btn.disabled = true;
-            btn.innerHTML = `<span class="return-spinner"></span>`;
-
-            fetch("/cancel-return-pickup", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ orderNumber })
-            }).then(function () {
-              meta.innerHTML =
-                `<div class="return-success">Return cancelled successfully</div>`;
-            });
-          };
-        }
-      }
-
-      /* =========================
-         REQUEST RETURN
-      ========================= */
-      else {
+      if (!rs?.exists || rs.status === "CANCELLED") {
         btn.id = "custom-return-btn";
         btn.textContent = "Request Return";
 
         if (rs?.windowExpired) {
           btn.disabled = true;
+          meta.textContent = "Return window expired";
+        } else {
+          meta.textContent = `Return window: ${rs?.daysLeft ?? 14} day(s) left`;
         }
 
         btn.onclick = function () {
@@ -655,12 +626,41 @@ orderEl.dataset.returnInjected = "1";
         };
       }
 
+      /* =========================
+         RETURN IN PROGRESS
+      ========================= */
+      else {
+        btn.id = "custom-cancel-return-btn";
+        btn.textContent = "Cancel Return";
+        meta.textContent = "Your return is in progress";
+
+        if (rs.pickupStatus === "COLLECTED") {
+          btn.disabled = true;
+          meta.textContent = "Pickup already collected";
+        }
+
+        btn.onclick = function () {
+          btn.disabled = true;
+          btn.innerHTML = `<span class="return-spinner"></span>`;
+
+          fetch("/cancel-return-pickup", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ orderNumber })
+          }).then(function () {
+            meta.textContent = "Return cancelled successfully";
+            btn.remove();
+          });
+        };
+      }
+
       wrap.appendChild(btn);
       wrap.appendChild(meta);
-      buyAgainBtn.insertAdjacentElement("afterend", wrap);
+      actionsEl.insertAdjacentElement("afterend", wrap);
     });
   });
 }
+
 
   /* =========================================================
      EVENTS
@@ -716,6 +716,7 @@ orderEl.dataset.returnInjected = "1";
     });
   });
 })();
+
 
 
 
