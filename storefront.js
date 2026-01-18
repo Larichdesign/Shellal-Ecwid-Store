@@ -21,6 +21,34 @@ function safeOnPageLoaded(handler) {
   });
 }
 
+function findOrderBlockByNumber(orderNumber) {
+  var blocks = document.querySelectorAll(".ec-cart__order");
+  for (var i = 0; i < blocks.length; i++) {
+    var title = blocks[i].querySelector(".ec-confirmation__title");
+    if (title && title.textContent.includes("#" + orderNumber)) {
+      return blocks[i];
+    }
+  }
+  return null;
+}
+
+
+function formatReturnCountdown(daysLeft) {
+  if (daysLeft <= 0) return "Return window expired";
+  if (daysLeft === 1) return "Return window: 1 day left";
+  return `Return window: ${daysLeft} days left`;
+}
+
+function getReturnStatus(orderNumber) {
+  return fetch("/return-status?orderNumber=" + encodeURIComponent(orderNumber))
+    .then(function (r) {
+      return r.ok ? r.json() : null;
+    })
+    .catch(function () {
+      return null;
+    });
+}
+
 
 /* =========================================================
    TABBY CONFIG (UNCHANGED LOGIC, SAFE HOOKS)
@@ -353,7 +381,6 @@ if (Ecwid.OnCheckoutChanged && Ecwid.OnCheckoutChanged.add) {
   font-weight: 500;
 }
 
-
       #return-submit {
         background: #000;
         color: #fff;
@@ -394,6 +421,17 @@ if (Ecwid.OnCheckoutChanged && Ecwid.OnCheckoutChanged.add) {
   opacity: 0.6;
   cursor: not-allowed;
 }
+
+.return-meta {
+  margin-top: 6px;
+  font-size: 13px;
+  color: #666;
+}
+
+.return-meta strong {
+  color: #000;
+}
+
 
     `;
     document.head.appendChild(s);
@@ -438,26 +476,79 @@ if (Ecwid.OnCheckoutChanged && Ecwid.OnCheckoutChanged.add) {
   /* =========================================================
      SUCCESS STATE
   ========================================================= */
-  function showSuccess() {
-    var box = document.querySelector(".return-box");
-    box.innerHTML = `
-      <h3>Return submitted</h3>
-      <p>Your return request has been submitted successfully.</p>
-      <button id="return-success-close">Close</button>
-    `;
+function showSuccess() {
+  var box = document.querySelector(".return-box");
+  var orderNumber =
+    document.getElementById("return-order-number").value;
 
-    document
-      .getElementById("return-success-close")
-      .onclick = function () {
-        document.getElementById("return-modal").classList.remove("active");
-      };
+  box.innerHTML = `
+    <h3>Return submitted</h3>
+    <p class="return-success">
+      Your return request has been submitted successfully.
+    </p>
+  `;
+
+  // 🔒 Disable Request Return button immediately
+  var orderBlock = findOrderBlockByNumber(orderNumber);
+  if (!orderBlock) return;
+
+  var wrap = orderBlock.querySelector(".custom-return-wrap");
+  if (!wrap) return;
+
+  var btn = wrap.querySelector("#custom-return-btn");
+  if (btn) {
+    btn.disabled = true;
+    btn.textContent = "Return Requested";
   }
 
-  function getReturnStatus(orderNumber) {
-  return fetch("/return-status?orderNumber=" + orderNumber)
-    .then(r => r.ok ? r.json() : null)
-    .catch(() => null);
+  // 🔄 Re-fetch return status & update UI
+  getReturnStatus(orderNumber).then(function (rs) {
+    if (!rs) return;
+
+    // Replace button with Cancel Return
+    wrap.innerHTML = "";
+
+    var cancelBtn = document.createElement("button");
+    cancelBtn.id = "custom-cancel-return-btn";
+    cancelBtn.textContent = "Cancel Return";
+
+    var meta = document.createElement("div");
+    meta.className = "return-meta";
+
+    // ⏳ Countdown message
+    if (!rs.windowExpired) {
+      meta.textContent = formatReturnCountdown(rs.daysLeft);
+    } else {
+      meta.textContent = "Return window expired";
+      cancelBtn.style.display = "none";
+    }
+
+    // 🚫 Disable cancel if pickup already collected
+    if (rs.pickupStatus === "COLLECTED") {
+      cancelBtn.disabled = true;
+      meta.textContent = "Pickup already collected";
+    } else {
+      cancelBtn.onclick = function () {
+        cancelBtn.disabled = true;
+        cancelBtn.innerHTML = `<span class="return-spinner"></span>`;
+
+        fetch("/cancel-return", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ orderNumber })
+        }).then(function () {
+          meta.innerHTML =
+            `<div class="return-success">Return cancelled successfully</div>`;
+          cancelBtn.remove();
+        });
+      };
+    }
+
+    wrap.appendChild(cancelBtn);
+    wrap.appendChild(meta);
+  });
 }
+
 
 
   /* =========================================================
@@ -608,5 +699,6 @@ if (Ecwid.OnCheckoutChanged && Ecwid.OnCheckoutChanged.add) {
     });
   });
 })();
+
 
 
