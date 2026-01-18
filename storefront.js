@@ -306,9 +306,7 @@ if (Ecwid.OnCheckoutChanged && Ecwid.OnCheckoutChanged.add) {
       #custom-return-btn:hover { background: #222; }
 
       .custom-return-wrap {
-        display: flex;
-  flex-direction: column;
-  gap: 8px; /* 👈 controls spacing */
+  gap: 8px;
   margin-top: 8px;
       }
 
@@ -702,6 +700,7 @@ function showSuccess() {
     });
   });
 })();
+
 
 
 
