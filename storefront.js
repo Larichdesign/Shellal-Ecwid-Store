@@ -49,6 +49,13 @@ function getReturnStatus(orderNumber) {
     });
 }
 
+function isDelivered(orderEl) {
+  return !!orderEl.querySelector(
+    ".ec-confirmation__status--delivered"
+  );
+}
+
+
 /* =========================================================
    TABBY CONFIG
    ========================================================= */
@@ -655,6 +662,10 @@ function showSuccess() {
  function injectButtons() {
   document.querySelectorAll(".ec-cart__order").forEach(function (orderEl) {
     if (orderEl.dataset.returnInjected === "1") return;
+
+     if (!isDelivered(orderEl)) {
+      return; // ← this hides everything
+    }
     orderEl.dataset.returnInjected = "1";
 
     const actionsEl = orderEl.querySelector(".ec-confirmation__actions");
