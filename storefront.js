@@ -21,15 +21,12 @@ function safeOnPageLoaded(handler) {
   });
 }
 
-function findOrderBlockByNumber(orderNumber) {
-  var blocks = document.querySelectorAll(".ec-cart__order");
-  for (var i = 0; i < blocks.length; i++) {
-    var title = blocks[i].querySelector(".ec-confirmation__title");
-    if (title && title.textContent.includes("#" + orderNumber)) {
-      return blocks[i];
-    }
-  }
-  return null;
+function getAwbFromOrder(orderEl) {
+  // Ecwid stores AWB in tracking number
+  const tracking = orderEl.querySelector(
+    ".ec-confirmation__tracking-number"
+  );
+  return tracking ? tracking.textContent.trim() : null;
 }
 
 
@@ -39,20 +36,15 @@ function formatReturnCountdown(daysLeft) {
   return `Return window: ${daysLeft} days left`;
 }
 
-function getReturnStatus(orderNumber) {
-  return fetch("/return-status?orderNumber=" + encodeURIComponent(orderNumber))
-    .then(function (r) {
-      return r.ok ? r.json() : null;
-    })
-    .catch(function () {
-      return null;
-    });
+
+function getReturnStatus(awb) {
+  return fetch(`/return-status?awb=${encodeURIComponent(awb)}`)
+    .then(r => r.ok ? r.json() : null)
+    .catch(() => null);
 }
 
 function isDelivered(orderEl) {
-  return !!orderEl.querySelector(
-    ".ec-confirmation__status--delivered"
-  );
+  return !!orderEl.querySelector(".ec-confirmation__status--delivered");
 }
 
 
@@ -298,6 +290,7 @@ if (Ecwid.OnCheckoutChanged?.add) {
     Ecwid.Cart.get(renderCheckoutTabbyCard);
   });
 }
+
 
 /* =========================================================
    RETURN FEATURE – FINAL (STABLE + ECWID-SAFE)
@@ -546,37 +539,37 @@ gap: 8px;
      MODAL
   ========================================================= */
   function injectModal() {
-    if (document.getElementById("return-modal")) return;
+  if (document.getElementById("return-modal")) return;
 
-    var m = document.createElement("div");
-    m.id = "return-modal";
-    m.innerHTML = `
-      <div class="return-overlay"></div>
-      <div class="return-box">
-        <input type="hidden" id="return-order-number" />
+  const m = document.createElement("div");
+  m.id = "return-modal";
+  m.innerHTML = `
+    <div class="return-overlay"></div>
+    <div class="return-box">
+      <input type="hidden" id="return-awb" />
 
-        <label class="return-label">Return title</label>
-        <input id="return-title" />
+      <label class="return-label">Return title</label>
+      <input id="return-title" />
 
-        <label class="return-label">Reason for return</label>
-        <textarea id="return-reason"></textarea>
+      <label class="return-label">Reason for return</label>
+      <textarea id="return-reason"></textarea>
 
-        <div class="return-actions">
-          <button id="return-submit" disabled>Submit</button>
-          <button id="return-cancel">Cancel</button>
-        </div>
+      <div class="return-actions">
+        <button id="return-submit" disabled>Submit</button>
+        <button id="return-cancel">Cancel</button>
       </div>
-    `;
-    document.body.appendChild(m);
+    </div>
+  `;
+  document.body.appendChild(m);
 
-    var title = document.getElementById("return-title");
-    var reason = document.getElementById("return-reason");
-    var submit = document.getElementById("return-submit");
+  const title = document.getElementById("return-title");
+  const reason = document.getElementById("return-reason");
+  const submit = document.getElementById("return-submit");
 
-    title.oninput = reason.oninput = function () {
-      submit.disabled = !title.value.trim() || !reason.value.trim();
-    };
-  }
+  title.oninput = reason.oninput = () => {
+    submit.disabled = !title.value.trim() || !reason.value.trim();
+  };
+}
 
   /* =========================================================
      SUCCESS STATE
@@ -660,49 +653,39 @@ function showSuccess() {
      BUTTON INJECTION
   ========================================================= */
  function injectButtons() {
-  document.querySelectorAll(".ec-cart__order").forEach(function (orderEl) {
+  document.querySelectorAll(".ec-cart__order").forEach(orderEl => {
     if (orderEl.dataset.returnInjected === "1") return;
 
-     if (!isDelivered(orderEl)) {
-      return; // ← this hides everything
-    }
+    if (!isDelivered(orderEl)) return;
+
+    const awb = getAwbFromOrder(orderEl);
+    if (!awb) return; // 🔐 ONLY AWB ORDERS
+
     orderEl.dataset.returnInjected = "1";
 
     const actionsEl = orderEl.querySelector(".ec-confirmation__actions");
-    const titleEl = orderEl.querySelector(".ec-confirmation__title");
-
-    if (!actionsEl || !titleEl) return;
-
-    const match = titleEl.textContent.match(/#(\d+)/);
-    if (!match) return;
-
-    const orderNumber = match[1];
+    if (!actionsEl) return;
 
     const wrap = document.createElement("div");
     wrap.className = "custom-return-wrap";
 
-    getReturnStatus(orderNumber).then(function (rs) {
+    getReturnStatus(awb).then(rs => {
       const btn = document.createElement("button");
       const meta = document.createElement("div");
       meta.className = "return-meta";
 
-      /* =========================
-         REQUEST RETURN STATE
-      ========================= */
+      /* =====================
+         NO RETURN YET
+      ===================== */
       if (!rs?.exists || rs.status === "CANCELLED") {
         btn.id = "custom-return-btn";
         btn.textContent = "Request Return";
 
-        if (rs?.windowExpired) {
-          btn.disabled = true;
-          meta.textContent = "Return window expired";
-        } else {
-          meta.textContent = `Return window: ${rs?.daysLeft ?? 14} day(s) left`;
-        }
+        meta.textContent = "You have 14 days to request a return";
 
-        btn.onclick = function () {
+        btn.onclick = () => {
           injectModal();
-          document.getElementById("return-order-number").value = orderNumber;
+          document.getElementById("return-awb").value = awb;
           document.getElementById("return-title").value = "";
           document.getElementById("return-reason").value = "";
           document.getElementById("return-submit").disabled = true;
@@ -710,44 +693,42 @@ function showSuccess() {
         };
       }
 
-      /* =========================
-   RETURN EXISTS
-========================= */
-else {
-  // 🚫 Pickup NOT created yet → no cancel allowed
-  if (rs.pickupStatus === "PENDING") {
-    btn.id = "custom-cancel-return-btn";
-    btn.textContent = "Cancel Return";
-    btn.disabled = true;
-    meta.textContent = "Your return is in progress";
-  }
+      /* =====================
+         RETURN REQUESTED
+      ===================== */
+      else {
+        btn.id = "custom-cancel-return-btn";
+        btn.textContent = "Cancel Return";
 
-  // ✅ Pickup created → cancel allowed
-  else {
-    btn.id = "custom-cancel-return-btn";
-    btn.textContent = "Cancel Return";
-    meta.textContent = "Return scheduled. You can cancel before pickup.";
+        if (rs.status === "REQUESTED") {
+          meta.textContent =
+            "You have 1 hour to cancel your return request";
+        }
 
-    if (rs.pickupStatus === "COLLECTED") {
-      btn.disabled = true;
-      meta.textContent = "Pickup already collected";
-    } else {
-      btn.onclick = function () {
-        btn.disabled = true;
-        btn.innerHTML = `<span class="return-spinner"></span>`;
+        if (rs.status === "PICKUP_SCHEDULED") {
+          meta.textContent =
+            "Pickup scheduled. You may cancel before pickup.";
+        }
 
-        fetch("/cancel-return-pickup", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ orderNumber })
-        }).then(function () {
-          meta.textContent = "Return cancelled successfully";
-          btn.remove();
-        });
-      };
-    }
-  }
-}
+        if (rs.status === "PICKED_UP") {
+          btn.disabled = true;
+          meta.textContent = "Pickup already collected";
+        } else {
+          btn.onclick = () => {
+            btn.disabled = true;
+            btn.innerHTML = `<span class="return-spinner"></span>`;
+
+            fetch("/cancel-return", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ awb })
+            }).then(() => {
+              meta.textContent = "Return cancelled successfully";
+              btn.remove();
+            });
+          };
+        }
+      }
 
       wrap.appendChild(btn);
       wrap.appendChild(meta);
@@ -760,73 +741,50 @@ else {
   /* =========================================================
      EVENTS
   ========================================================= */
-  document.addEventListener("click", function (e) {
-    if (
-      e.target.id === "return-cancel" ||
-      e.target.classList.contains("return-overlay")
-    ) {
-      document.getElementById("return-modal")?.classList.remove("active");
-    }
+  document.addEventListener("click", e => {
+  if (
+    e.target.id === "return-cancel" ||
+    e.target.classList.contains("return-overlay")
+  ) {
+    document.getElementById("return-modal")?.classList.remove("active");
+  }
 
-    if (e.target.id === "return-submit") {
-      var orderNumber =
-        document.getElementById("return-order-number").value;
-      var title = document.getElementById("return-title").value.trim();
-      var reason = document.getElementById("return-reason").value.trim();
+  if (e.target.id === "return-submit") {
+    const awb = document.getElementById("return-awb").value;
+    const title = document.getElementById("return-title").value.trim();
+    const reason = document.getElementById("return-reason").value.trim();
 
-      e.target.disabled = true;
-      e.target.innerHTML = `<span class="return-spinner"></span>`;
+    e.target.disabled = true;
+    e.target.innerHTML = `<span class="return-spinner"></span>`;
 
-      fetch("/request-return", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          orderNumber: orderNumber,
-          returnRequest: {
-            title: title,
-            reason: reason,
-            requestedAt: new Date().toISOString()
-          }
-        })
+    fetch("/request-return", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ awb, title, reason })
+    })
+      .then(() => {
+        document.getElementById("return-modal").classList.remove("active");
       })
-        .then(showSuccess)
-        .catch(function () {
-          alert("Failed to submit return. Please try again.");
-        });
-    }
-  });
+      .catch(() => {
+        alert("Failed to submit return. Please try again.");
+      });
+  }
+});
+
 
   /* =========================================================
      INIT
   ========================================================= */
-  safeOnPageLoaded(function (page) {
-    if (page.type !== "ACCOUNT_ROOT" && page.type !== "ORDER_DETAILS") return;
+  safeOnPageLoaded(page => {
+  if (page.type !== "ACCOUNT_ROOT" && page.type !== "ORDER_DETAILS") return;
 
-    injectStyles();
-    injectButtons();
+  injectStyles(); // 🔒 untouched
+  injectButtons();
 
-    new MutationObserver(injectButtons).observe(document.body, {
-      childList: true,
-      subtree: true
-    });
+  new MutationObserver(injectButtons).observe(document.body, {
+    childList: true,
+    subtree: true
   });
+});
 })();
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
