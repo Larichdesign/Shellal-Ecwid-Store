@@ -788,3 +788,96 @@ function showSuccess() {
 });
 })();
 
+
+/* =========================================================
+   SHIPPING METHOD GUARD – ARAMEX (SAFE)
+   ========================================================= */
+
+(function () {
+  const DEBUG = true;
+  function log() {
+    if (DEBUG) console.log("[ARAMEX GUARD]", ...arguments);
+  }
+
+  function getAramexRadio() {
+    return document.querySelector(
+      ".ec-radiogroup__item--Aramex, " +
+      ".ec-radiogroup__item--app_id-Aramex"
+    );
+  }
+
+  function shouldHideAramex(cart) {
+    if (!cart || !cart.shippingPerson) return true;
+
+    const a = cart.shippingPerson;
+
+    // country required
+    if (!a.countryCode) return true;
+
+    // city required
+    if (!a.city || a.city.trim().length < 2) return true;
+
+    // postcode rules (adjust per country if needed)
+    if (a.countryCode === "AE") {
+      // UAE technically allows empty postcode,
+      // but Aramex still fails on bad routing
+      return false;
+    }
+
+    // other countries → postcode required
+    if (!a.postalCode || a.postalCode.trim().length < 3) return true;
+
+    return false;
+  }
+
+  function updateAramexVisibility() {
+    Ecwid.Cart.get(function (cart) {
+      const aramex = getAramexRadio();
+      if (!aramex) return;
+
+      if (shouldHideAramex(cart)) {
+        aramex.style.display = "none";
+         showAramexHint(true);
+        log("Aramex hidden (invalid address)");
+      } else {
+        aramex.style.display = "";
+         showAramexHint(false);
+        log("Aramex visible");
+      }
+    });
+  }
+
+   function showAramexHint(show) {
+  let hint = document.getElementById("aramex-hint");
+
+  if (!hint) {
+    hint = document.createElement("div");
+    hint.id = "aramex-hint";
+    hint.style.marginTop = "8px";
+    hint.style.fontSize = "13px";
+    hint.style.color = "#b00020";
+    hint.textContent =
+      "Please enter a valid city and postal code to enable Aramex delivery.";
+    document
+      .querySelector(".ec-cart-step__section")
+      ?.appendChild(hint);
+  }
+
+  hint.style.display = show ? "block" : "none";
+}
+
+  // Initial load
+  if (Ecwid.OnPageLoaded?.add) {
+    Ecwid.OnPageLoaded.add(function (page) {
+      if (page.type?.indexOf("CHECKOUT_") !== 0) return;
+      setTimeout(updateAramexVisibility, 300);
+    });
+  }
+
+  // React to checkout changes (address edits)
+  if (Ecwid.OnCheckoutChanged?.add) {
+    Ecwid.OnCheckoutChanged.add(function () {
+      setTimeout(updateAramexVisibility, 300);
+    });
+  }
+})();
