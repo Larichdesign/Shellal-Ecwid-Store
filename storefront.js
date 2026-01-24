@@ -788,9 +788,8 @@ function showSuccess() {
 });
 })();
 
-
 /* =========================================================
-   SHIPPING METHOD GUARD – ARAMEX (SAFE)
+   ARAMEX SHIPPING GUARD + USER MESSAGE (ECWID-SAFE)
    ========================================================= */
 
 (function () {
@@ -799,84 +798,103 @@ function showSuccess() {
     if (DEBUG) console.log("[ARAMEX GUARD]", ...arguments);
   }
 
-  function getAramexRadio() {
-    return document.querySelector(
-      ".ec-radiogroup__item--Aramex, " +
-      ".ec-radiogroup__item--app_id-Aramex"
-    );
+  /* -----------------------------------------
+     FIND ARAMEX SHIPPING RADIO ITEMS
+  ----------------------------------------- */
+  function findAramexShippingItems() {
+    return Array.from(
+      document.querySelectorAll(".ec-radiogroup__item")
+    ).filter(item => {
+      const title = item.querySelector(".ec-radiogroup__title");
+      return (
+        title &&
+        title.textContent.trim().toLowerCase().includes("aramex")
+      );
+    });
   }
 
-  function shouldHideAramex(cart) {
+  /* -----------------------------------------
+     ADDRESS VALIDATION (BASED ON ARAMEX ERRORS)
+  ----------------------------------------- */
+  function isAddressInvalid(cart) {
     if (!cart || !cart.shippingPerson) return true;
 
     const a = cart.shippingPerson;
 
-    // country required
+    // ERR04 – Country missing
     if (!a.countryCode) return true;
 
-    // city required
+    // ERR05 – Invalid city
     if (!a.city || a.city.trim().length < 2) return true;
 
-    // postcode rules (adjust per country if needed)
-    if (a.countryCode === "AE") {
-      // UAE technically allows empty postcode,
-      // but Aramex still fails on bad routing
-      return false;
+    // ERR06 – Invalid zipcode (non-AE)
+    if (a.countryCode !== "AE") {
+      if (!a.postalCode || a.postalCode.trim().length < 3) {
+        return true;
+      }
     }
-
-    // other countries → postcode required
-    if (!a.postalCode || a.postalCode.trim().length < 3) return true;
 
     return false;
   }
 
-  function updateAramexVisibility() {
-    Ecwid.Cart.get(function (cart) {
-      const aramex = getAramexRadio();
-      if (!aramex) return;
+  /* -----------------------------------------
+     MESSAGE UI
+  ----------------------------------------- */
+  function toggleAramexMessage(show) {
+    let msg = document.getElementById("aramex-address-error");
 
-      if (shouldHideAramex(cart)) {
-        aramex.style.display = "none";
-         showAramexHint(true);
-        log("Aramex hidden (invalid address)");
-      } else {
-        aramex.style.display = "";
-         showAramexHint(false);
-        log("Aramex visible");
-      }
+    if (!msg) {
+      msg = document.createElement("div");
+      msg.id = "aramex-address-error";
+      msg.textContent =
+        "Please enter a valid city and postal code to enable Aramex delivery.";
+      const container =
+        document.querySelector(".ec-cart-step__section") ||
+        document.querySelector(".ec-cart-step__body");
+      if (container) container.appendChild(msg);
+    }
+
+    msg.style.display = show ? "block" : "none";
+  }
+
+  /* -----------------------------------------
+     MAIN VISIBILITY LOGIC
+  ----------------------------------------- */
+  function updateAramexVisibility() {
+    if (!window.Ecwid || !Ecwid.Cart) return;
+
+    Ecwid.Cart.get(cart => {
+      const aramexItems = findAramexShippingItems();
+      if (!aramexItems.length) return;
+
+      const hide = isAddressInvalid(cart);
+
+      aramexItems.forEach(item => {
+        item.style.display = hide ? "none" : "";
+      });
+
+      toggleAramexMessage(hide);
+
+      log(
+        hide
+          ? "Aramex hidden – invalid address"
+          : "Aramex visible"
+      );
     });
   }
 
-   function showAramexHint(show) {
-  let hint = document.getElementById("aramex-hint");
-
-  if (!hint) {
-    hint = document.createElement("div");
-    hint.id = "aramex-hint";
-    hint.style.marginTop = "8px";
-    hint.style.fontSize = "13px";
-    hint.style.color = "#b00020";
-    hint.textContent =
-      "Please enter a valid city and postal code to enable Aramex delivery.";
-    document
-      .querySelector(".ec-cart-step__section")
-      ?.appendChild(hint);
-  }
-
-  hint.style.display = show ? "block" : "none";
-}
-
-  // Initial load
+  /* -----------------------------------------
+     ECWID EVENTS
+  ----------------------------------------- */
   if (Ecwid.OnPageLoaded?.add) {
-    Ecwid.OnPageLoaded.add(function (page) {
+    Ecwid.OnPageLoaded.add(page => {
       if (page.type?.indexOf("CHECKOUT_") !== 0) return;
       setTimeout(updateAramexVisibility, 300);
     });
   }
 
-  // React to checkout changes (address edits)
   if (Ecwid.OnCheckoutChanged?.add) {
-    Ecwid.OnCheckoutChanged.add(function () {
+    Ecwid.OnCheckoutChanged.add(() => {
       setTimeout(updateAramexVisibility, 300);
     });
   }
