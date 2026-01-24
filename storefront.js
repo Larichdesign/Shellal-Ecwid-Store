@@ -788,24 +788,23 @@ function showSuccess() {
 });
 })();
 
+
 /* =========================================================
-   ARAMEX SHIPPING GUARD + USER MESSAGE (ECWID-SAFE)
+   ARAMEX SHIPPING GUARD (ECWID DOM–ACCURATE)
    ========================================================= */
 
 (function () {
   const DEBUG = true;
-  function log() {
-    if (DEBUG) console.log("[ARAMEX GUARD]", ...arguments);
-  }
+  const log = (...a) => DEBUG && console.log("[ARAMEX GUARD]", ...a);
 
   /* -----------------------------------------
-     FIND ARAMEX SHIPPING RADIO ITEMS
+     FIND ARAMEX SHIPPING LABELS (REAL DOM)
   ----------------------------------------- */
-  function findAramexShippingItems() {
+  function findAramexLabels() {
     return Array.from(
-      document.querySelectorAll(".ec-radiogroup__item")
-    ).filter(item => {
-      const title = item.querySelector(".ec-radiogroup__title");
+      document.querySelectorAll("label.ec-radiogroup__item")
+    ).filter(label => {
+      const title = label.querySelector(".ec-radiogroup__title");
       return (
         title &&
         title.textContent.trim().toLowerCase().includes("aramex")
@@ -814,20 +813,20 @@ function showSuccess() {
   }
 
   /* -----------------------------------------
-     ADDRESS VALIDATION (BASED ON ARAMEX ERRORS)
+     ADDRESS VALIDATION (ARAMEX RULES)
   ----------------------------------------- */
-  function isAddressInvalid(cart) {
+  function isInvalidAddress(cart) {
     if (!cart || !cart.shippingPerson) return true;
 
     const a = cart.shippingPerson;
 
-    // ERR04 – Country missing
+    // ERR04 – Invalid Country
     if (!a.countryCode) return true;
 
-    // ERR05 – Invalid city
+    // ERR05 – Invalid City
     if (!a.city || a.city.trim().length < 2) return true;
 
-    // ERR06 – Invalid zipcode (non-AE)
+    // ERR06 – Invalid Zip (required outside AE)
     if (a.countryCode !== "AE") {
       if (!a.postalCode || a.postalCode.trim().length < 3) {
         return true;
@@ -840,14 +839,14 @@ function showSuccess() {
   /* -----------------------------------------
      MESSAGE UI
   ----------------------------------------- */
-  function toggleAramexMessage(show) {
+  function toggleMessage(show) {
     let msg = document.getElementById("aramex-address-error");
 
     if (!msg) {
       msg = document.createElement("div");
       msg.id = "aramex-address-error";
       msg.textContent =
-        "Please enter a valid city and postal code to enable Aramex delivery.";
+        "Aramex delivery is unavailable. Please enter a valid city and postal code.";
       const container =
         document.querySelector(".ec-cart-step__section") ||
         document.querySelector(".ec-cart-step__body");
@@ -858,44 +857,45 @@ function showSuccess() {
   }
 
   /* -----------------------------------------
-     MAIN VISIBILITY LOGIC
+     APPLY VISIBILITY
   ----------------------------------------- */
-  function updateAramexVisibility() {
+  function updateVisibility() {
     if (!window.Ecwid || !Ecwid.Cart) return;
 
     Ecwid.Cart.get(cart => {
-      const aramexItems = findAramexShippingItems();
-      if (!aramexItems.length) return;
+      const labels = findAramexLabels();
+      if (!labels.length) return;
 
-      const hide = isAddressInvalid(cart);
+      const hide = isInvalidAddress(cart);
 
-      aramexItems.forEach(item => {
-        item.style.display = hide ? "none" : "";
+      labels.forEach(label => {
+        if (hide) {
+          label.setAttribute("hidden", "true");
+          label.style.display = "none";
+          label.style.pointerEvents = "none";
+        } else {
+          label.removeAttribute("hidden");
+          label.style.display = "";
+          label.style.pointerEvents = "";
+        }
       });
 
-      toggleAramexMessage(hide);
+      toggleMessage(hide);
 
-      log(
-        hide
-          ? "Aramex hidden – invalid address"
-          : "Aramex visible"
-      );
+      log(hide ? "Aramex hidden" : "Aramex visible");
     });
   }
 
   /* -----------------------------------------
-     ECWID EVENTS
+     ECWID HOOKS
   ----------------------------------------- */
-  if (Ecwid.OnPageLoaded?.add) {
-    Ecwid.OnPageLoaded.add(page => {
-      if (page.type?.indexOf("CHECKOUT_") !== 0) return;
-      setTimeout(updateAramexVisibility, 300);
-    });
-  }
+  Ecwid.OnPageLoaded?.add(page => {
+    if (page.type?.startsWith("CHECKOUT_")) {
+      setTimeout(updateVisibility, 400);
+    }
+  });
 
-  if (Ecwid.OnCheckoutChanged?.add) {
-    Ecwid.OnCheckoutChanged.add(() => {
-      setTimeout(updateAramexVisibility, 300);
-    });
-  }
+  Ecwid.OnCheckoutChanged?.add(() => {
+    setTimeout(updateVisibility, 400);
+  });
 })();
