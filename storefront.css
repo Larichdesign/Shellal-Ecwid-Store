@@ -2,18 +2,3 @@
 .ec-radiogroup__item--Pay-with-Tabby {
   display: none;
 }
-
-/* =========================================
-   ARAMEX ADDRESS ERROR MESSAGE
-========================================= */
-
-#aramex-address-error {
-  margin-top: 10px;
-  padding: 10px 12px;
-  font-size: 13px;
-  font-family: "DM Sans", system-ui, sans-serif;
-  color: #8a1f1f;
-  background: #fff5f5;
-  border: 1px solid #f2c2c2;
-  border-radius: 4px;
-}
