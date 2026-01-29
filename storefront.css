@@ -2,3 +2,14 @@
 .ec-radiogroup__item--Pay-with-Tabby {
   display: none;
 }
+
+#aramex-block-msg {
+  margin-top: 12px;
+  padding: 10px 12px;
+  font-size: 13px;
+  font-family: "DM Sans", system-ui, sans-serif;
+  color: #7a1c1c;
+  background: #fff5f5;
+  border: 1px solid #f2c2c2;
+  border-radius: 4px;
+}
