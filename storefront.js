@@ -787,3 +787,92 @@ function showSuccess() {
   });
 });
 })();
+
+
+/* =========================================================
+   ARAMEX SHIPPING VISIBILITY + COUNTRY BLOCK
+   ========================================================= */
+
+(function () {
+  const BLOCKED_COUNTRIES = [
+    "AF","CM","CF","TD","CD","ER","IR","LY","KP","SO"
+  ];
+
+  function findAramexLabels() {
+    return Array.from(
+      document.querySelectorAll("label.ec-radiogroup__item")
+    ).filter(label => {
+      const t = label.querySelector(".ec-radiogroup__title");
+      return t && t.textContent.toLowerCase().includes("aramex");
+    });
+  }
+
+  function isInvalid(cart) {
+    if (!cart || !cart.shippingPerson) return true;
+
+    const a = cart.shippingPerson;
+
+    if (!a.countryCode) return true;
+    if (BLOCKED_COUNTRIES.includes(a.countryCode)) return true;
+    if (!a.city || a.city.trim().length < 2) return true;
+
+    if (a.countryCode !== "AE") {
+      if (!a.postalCode || a.postalCode.trim().length < 3) {
+        return true;
+      }
+    }
+
+    return false;
+  }
+
+  function toggleMessage(show, reason) {
+    let el = document.getElementById("aramex-block-msg");
+    if (!el) {
+      el = document.createElement("div");
+      el.id = "aramex-block-msg";
+      document
+        .querySelector(".ec-cart-step__section")
+        ?.appendChild(el);
+    }
+    el.textContent = reason;
+    el.style.display = show ? "block" : "none";
+  }
+
+  function update() {
+    Ecwid.Cart.get(cart => {
+      const hide = isInvalid(cart);
+      const labels = findAramexLabels();
+
+      labels.forEach(l => {
+        l.style.display = hide ? "none" : "";
+        l.style.pointerEvents = hide ? "none" : "";
+      });
+
+      if (!hide) {
+        toggleMessage(false);
+        return;
+      }
+
+      let reason = "Aramex delivery is unavailable for this address.";
+
+      if (cart?.shippingPerson?.countryCode &&
+          BLOCKED_COUNTRIES.includes(cart.shippingPerson.countryCode)) {
+        reason = "Aramex does not deliver to the selected country.";
+      } else {
+        reason =
+          "Please enter a valid city and postal code to enable Aramex delivery.";
+      }
+
+      toggleMessage(true, reason);
+    });
+  }
+
+  Ecwid.OnPageLoaded?.add(p => {
+    if (p.type?.startsWith("CHECKOUT_")) setTimeout(update, 400);
+  });
+
+  Ecwid.OnCheckoutChanged?.add(() => {
+    setTimeout(update, 400);
+  });
+})();
+
